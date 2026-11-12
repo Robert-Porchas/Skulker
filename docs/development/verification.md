@@ -28,11 +28,11 @@ alone does not establish that a deployment, integration, or benchmark works.
 
 ## Environment prerequisites for later gates
 
-The Linux Docker wrapper reports disabled WSL integration and no local socket is available.
-The user has been asked to enable integration. An escalated read-only `docker.exe version`
-check confirms Docker Desktop's Linux engine is running through the Windows CLI.
-Real PostgreSQL/RabbitMQ and local Kubernetes checks still require validated runtime access;
-containerized checks are an alternative if Linux integration remains unavailable.
+At Milestone 2 initialization, the Linux Docker wrapper reported disabled WSL integration
+and no local socket. A read-only `docker.exe version` check confirmed Docker Desktop's
+Linux engine through the Windows CLI, enabling containerized PostgreSQL/RabbitMQ checks.
+Native WSL integration was restored and verified during Milestone 4; Milestone 5's full
+Java build and subsequent Kubernetes/browser checks used the native runtime successfully.
 Cloud provisioning remains separately authorized and must include cost and teardown review.
 
 ## Milestone 2 — passed
@@ -95,3 +95,15 @@ Cloud provisioning remains separately authorized and must include cost and teard
 - Independent review found no blocking source or documentation issue. Shell syntax/ShellCheck, repository formatting, and combined diff passed. CI uses the same mock-only verifier and receives no AWS credentials.
 - [ADR-008](../adr/008-optional-aws-foundation.md) is accepted for the architectural boundary. The [AWS guide](aws.md) records official source-backed costs, state prerequisites, explicit version resolution, teardown order, and remaining-resource/billing verification.
 - No AWS credentials, account APIs, real cloud plans, applies, resources, registry pushes, or deployments were used. Local kind remains the verified application runtime. Cloud storage integration, CSI/application deployment, and regional compatibility remain future approved work.
+
+## Milestone 7 — passed
+
+- Implemented the local Next.js dashboard for CSV upload/download, paginated datasets/jobs, single backtests, bounded parameter sweeps, durable status polling, results, exact trade tables, normalized equity inspection, and four-run comparisons. The Java engine remains the sole financial simulation implementation.
+- `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build` passed on Node 24.19.0. Twenty unit tests passed with zero failures/skips, including lossless monetary/share tokens beyond JavaScript's safe integer range, body limits, route/query restrictions, local origins, and validation/error handling.
+- A clean `npm ci --ignore-scripts --no-fund` reproduced the locked dependency graph, reported zero npm vulnerabilities, and passed formatting/lint/type/unit checks again. Generated declarations, dependency caches, browser reports, and build outputs remain ignored.
+- `PLAYWRIGHT_BROWSERS_PATH=../.tooling/playwright npm run test:e2e` passed all seven Chromium workflows against the production build and deterministic HTTP fixtures. Covers empty/error states, invalid inputs, CSV errors, exact large decimals, mobile overflow/keyboard labels, full execution/comparison/sweep flow, and results focus/viewport behavior.
+- `SKULKER_LIVE_API_URL=http://127.0.0.1:18080 PLAYWRIGHT_BROWSERS_PATH=../.tooling/playwright npm run test:e2e` passed its selected live workflow against the CA-guarded kind API, real PostgreSQL/RabbitMQ, and workers. Final run: 2026-11-12 03:47:29–03:48:06 UTC, one expected test, zero failed/skipped/flaky tests.
+- Live assertions verified exact six-bar CSV retrieval, SMA 1/2 with capital 100 and fee 1 ending at 27, one next-open buy at 10, total return -73%, drawdown 73%, SMA 2/3 ending at 99, two-result comparison, and two successful sweep tasks. These are correctness fixtures, not profitability claims. Each live run retains its dataset and four completed leaf jobs locally.
+- Browser checks exposed a Next internal-host/origin mismatch; the proxy now validates the bound loopback Host and rejects foreign authorities, with regression tests. Bounded startup-output readiness fixes this host's closed-port probe hang. Test locators were corrected to use the controls' actual accessible roles before final acceptance.
+- Separate agents owned UI, tests, and architecture documentation/review. Root integrated the proxy/toolchain/CI, reviewed changes, ran acceptance checks, and visually inspected desktop/mobile screenshots. Evidence remains ignored in `.tooling/dashboard-live.json`, `.tooling/dashboard-live-playwright.json`, and `.tooling/dashboard-desktop.png`.
+- Four CI jobs are configured with read-only permissions and immutable action pins. Remote CI and branch protection remain unverified. Test servers/forwards were cleaned up; the owned kind application remains local. No hosting, pushes, merges, or cloud provisioning occurred.

@@ -17,11 +17,16 @@ Delivery proceeds sequentially through the milestones below. Completion claims m
 
 The engine includes immutable price/configuration/result models, strict CSV ingestion, daily and cumulative returns, SMA, rolling sample volatility, maximum drawdown, long-only crossover simulation, exact decimal accounting, trade history, equity curves, performance metrics, and deterministic tests. Its acceptance gate is recorded separately after integrated checks pass.
 
-## Remaining sequence
+## Delivery status
 
-Milestones 0–5 have passed their recorded acceptance gates. Milestone 6 passed its
+Milestones 0–5 and 7 have passed their recorded acceptance gates. Milestone 6 passed its
 unprovisioned configuration gate, with cloud runtime deployment explicitly deferred by the user.
-Continue to the Next.js dashboard and test its user flows against the established API.
+The dashboard was checked against both deterministic HTTP fixtures and the actual local
+API, PostgreSQL, RabbitMQ, and workers. The authorized local roadmap is complete.
 
 Any reprioritization should update this roadmap and the README together. Cloud provisioning
 remains separately approved; local development requires no paid market data or AWS credentials.
+
+Future approved work can address authentication and tenancy, cloud storage integration,
+regional AWS deployment/runtime checks, durable cloud database/backups, and performance profiling.
+These are separate extensions; validated Terraform does not establish cloud readiness.

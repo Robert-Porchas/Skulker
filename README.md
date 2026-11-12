@@ -6,8 +6,8 @@ trades or connect to brokerages. Historical performance does not predict future 
 
 ## Current implementation
 
-Milestone 0 establishes the Java build, repository conventions, CI, and architecture
-documentation. Milestone 1 provides:
+Skulker includes the repository foundation, financial engine, durable services, local
+deployment, monitoring, and a Next.js research dashboard:
 
 - Immutable, validated `PriceBar` and `HistoricalPriceSeries` models
 - Strict historical CSV ingestion with row-numbered validation errors
@@ -23,8 +23,10 @@ documentation. Milestone 1 provides:
 - Nonroot application images, local kind/Helm deployment, and KEDA RabbitMQ scaling configuration
 - Private Prometheus/Grafana monitoring, durable job metrics, and controlled worker benchmarks
 - Optional AWS Terraform foundation with credential-free mock-provider validation
+- Dataset upload/download, backtest and sweep forms, job monitoring, exact result tables,
+  equity charts, and strategy comparison in the Next.js dashboard
 
-AWS provisioning remains unperformed and requires separate approval. A dashboard is planned.
+AWS provisioning remains unperformed and requires separate approval.
 Milestone check results, including pending integration gates, are recorded in the
 [verification record](docs/development/verification.md).
 
@@ -49,6 +51,7 @@ docs/
 .github/                      Java CI and PR template
 infrastructure/               Local Helm chart, pinned kind configuration, optional AWS Terraform
 scripts/                      Image builds, guarded deployment, and smoke/scaling verification
+frontend/                     Next.js dashboard, bounded API proxy, and browser tests
 ```
 
 The engine depends only on the Java standard library at runtime. API and
@@ -61,7 +64,8 @@ Spring Boot 4.1.2, Boot-managed JUnit 6 service tests, PostgreSQL/Flyway, Docker
 RabbitMQ 4.3.7, and Spotless. Boot 3.5 ended OSS support; the [framework ADR](docs/adr/001-java-21-and-spring-boot.md)
 explains the supported-version deviation. Local deployment uses kind 0.33.0, Kubernetes 1.36.4,
 Helm 4.3.1, KEDA 2.21.0, Prometheus 3.16.0, Grafana 13.3.1, and optional Terraform 1.17.2
-with AWS provider 6.72.0. Next.js/TypeScript comes in the dashboard milestone.
+with AWS provider 6.72.0. The dashboard uses Node 24.19, Next.js 16.4.6, React 19.3.1,
+TypeScript 6.0.3, and Tailwind CSS 4.3.5.
 
 ## Local setup and checks
 
@@ -90,8 +94,8 @@ On Windows use `gradlew.bat` in the same directory. Useful focused commands:
 ./gradlew spotlessApply
 ```
 
-`build` compiles Java 21 code, runs tests, checks formatting, and creates the library
-JAR. Compilation uses `-Xlint:all -Werror`; no separate static analyzer is configured.
+`build` compiles Java 21 code, runs tests, checks formatting, and packages libraries
+and executable API/worker JARs. Compilation uses `-Xlint:all -Werror`; no separate static analyzer is configured.
 Test reports are written to `backend/financial-engine/build/reports/tests/test/index.html`.
 See [local API setup and HTTP examples](docs/development/local-api.md) to start PostgreSQL
 and the API/worker. The same guide covers containerized verification with Docker Desktop's
@@ -101,6 +105,10 @@ See [observability and controlled benchmarks](docs/development/observability.md)
 private monitoring and measure worker performance.
 See [optional AWS configuration, costs, and teardown](docs/development/aws.md) for Terraform
 validation. Its mock tests need no AWS account or credentials and create no cloud resources.
+See [dashboard setup and browser checks](docs/development/dashboard.md) for the frontend.
+With the API and workers running, use `npm ci --ignore-scripts` and `npm run dev` in
+`frontend/`; the dashboard opens at `http://127.0.0.1:3000`. Set the server-only
+`SKULKER_API_URL` when the API uses a different local port.
 
 GitHub Actions runs the build for pull requests and pushes to `main` using Java 21,
 SHA-pinned actions, Gradle caching, and read-only repository permissions.
@@ -140,9 +148,10 @@ not establish profitability.
 
 ## Development roadmap
 
-Milestones 0–5 are verified, including the [measured worker comparison](docs/development/worker-benchmark.md).
-Milestone 6 passed credential-free Terraform validation; AWS remains unprovisioned by choice.
-Next, implement the dashboard. AWS deployment requires separate approval.
+Milestones 0–5 and 7 are verified, including the [measured worker comparison](docs/development/worker-benchmark.md)
+and the dashboard's live API/worker workflow. Milestone 6 passed credential-free Terraform validation;
+AWS remains unprovisioned by choice. The authorized local roadmap is complete.
+Cloud deployment and any additional hosting require separate approval.
 See [milestones and acceptance criteria](docs/roadmap/milestones.md).
 
 Use short-lived feature branches and small Conventional Commits. Commits, pushes,
@@ -152,7 +161,7 @@ protection has not been verified or enabled by this implementation.
 
 ## Cost and licensing
 
-The current library needs no paid market data or cloud resources. Local-first
+The local platform needs no paid market data or cloud resources. Local-first
 development is the default. Any future AWS deployment requires explicit approval,
 a cost estimate, and a teardown verification plan.
 

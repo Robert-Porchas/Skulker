@@ -14,6 +14,9 @@ implementation starts with a pure Java 21 library, not a live-trading system.
   `worker-service` owns manual acknowledgments and execution. Acknowledge only after durable completion/retry
   or a verified active/terminal duplicate. Never acknowledge a merely not-yet-claimable pending task.
   Preserve retry availability timestamps, attempt budgets, and current-owner fencing.
+- `frontend` owns the local Next.js dashboard and allowlisted server proxy. Keep monetary values
+  and share counts as exact strings at the browser boundary; approximate only chart coordinates
+  and numerical ratios. Backend state and calculations remain authoritative.
 - Work through authorized milestones sequentially. Record each acceptance gate in
   `docs/development/verification.md` before starting the next milestone.
   Add concrete modules as needed; do not create empty placeholder modules.
@@ -35,6 +38,10 @@ The full build requires Docker for real PostgreSQL/RabbitMQ Testcontainers tests
 First builds require network access for dependencies/images. Tests never call market-data services.
 Focused unit checks: `./gradlew :financial-engine:test :job-store:test :api-service:test`.
 See `docs/development/local-api.md` for Docker Desktop verification and local API setup.
+For dashboard changes, use Node 24.19 and `npm ci --ignore-scripts` in `frontend/`, then
+`npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
+Run `npm run test:e2e` after installing the pinned Chromium. Mock browser tests and the live
+`SKULKER_LIVE_API_URL` workflow provide different evidence; report which actually executed.
 
 ## Code and financial correctness
 
@@ -49,7 +56,8 @@ See `docs/development/local-api.md` for Docker Desktop verification and local AP
 
 ## Git and collaboration
 
-- Inspect status/base branch first; preserve user changes. Use short-lived feature branches from `main`.
+- Inspect status/base branch first; preserve user changes. Use short-lived feature branches from `main`,
+  or the preceding verified commit for an unmerged milestone stack as documented in the workflow.
 - Do not commit, push, open PRs, merge, or rewrite shared history without explicit authorization.
 - Recommend small Conventional Commit boundaries; PRs state behavior, tests, and material risks.
 - Delegate independent substantial tasks when tools are available. Assign exclusive file ownership

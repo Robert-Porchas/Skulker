@@ -2,7 +2,8 @@
 
 Skulker is a historical financial research platform. Its financial engine is a pure Java library;
 the API, PostgreSQL store, and RabbitMQ workers provide durable distributed processing.
-There is no live trading, cloud deployment, or frontend.
+The Next.js dashboard accesses these capabilities through a private server proxy.
+There is no live trading or cloud deployment.
 
 ## Current boundary
 
@@ -24,6 +25,12 @@ There are six implemented modules. Shared build settings live in the Gradle root
 API and worker depend on engine, store, and messaging; messaging uses store and shared transport contracts.
 The engine has no dependency back to services, storage, messaging, or shared task contracts.
 See [durable local execution](../adr/006-durable-api-job-store.md) for storage and lease decisions.
+
+`frontend/` is a separate Next.js/React/TypeScript application. Browser requests use a
+same-origin allowlisted server proxy; the Java API remains authoritative for validation,
+job state, and financial computation. Monetary and share-count JSON tokens become exact
+strings before browser parsing. Charts use approximate dimensionless coordinates;
+tables and submitted amounts preserve original decimal digits.
 
 ## Responsibilities
 

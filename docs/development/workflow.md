@@ -55,7 +55,7 @@ Include tests with the behavior they verify. Validate each selected commit's con
 
 ## Recommended GitHub protection
 
-Branch protection is **manual and unverified**. Configure a ruleset for `main` that requires pull requests, the passing `Java 21 validation` check from `Java CI`, and resolved review conversations; block force pushes and branch deletion. Prevent direct pushes through the ruleset. Optionally require one reviewer and restrict bypass permissions. Confirm the exact status-check name after the workflow has run successfully before making it required.
+Branch protection is **manual and unverified**. Configure a ruleset for `main` that requires pull requests, passing `Java 21 validation`, `Infrastructure validation`, `Terraform mock validation`, and `Dashboard validation` checks from `Java CI`, and resolved review conversations; block force pushes and branch deletion. Prevent direct pushes through the ruleset. Optionally require one reviewer and restrict bypass permissions. Confirm the exact status-check names after the workflow has run successfully before making them required.
 
 The local agent does not enable these settings or claim that they are enabled. Prefer squash merges for short-lived feature branches. Verify that fork pull requests receive no deployment credentials; the initial CI has no AWS deployment step.
 
