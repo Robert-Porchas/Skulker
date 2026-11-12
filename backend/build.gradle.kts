@@ -25,6 +25,11 @@ subprojects {
       isReproducibleFileOrder = true
     }
   }
+  plugins.withId("org.springframework.boot") {
+    tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+      archiveFileName = "application.jar"
+    }
+  }
 }
 
 spotless {
@@ -42,6 +47,7 @@ spotless {
       "../.github/**/*.yml",
       "../.github/**/*.md",
       "../docs/**/*.md",
+      "../infrastructure/**/*.md",
     )
     trimTrailingWhitespace()
     endWithNewline()

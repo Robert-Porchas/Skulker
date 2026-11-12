@@ -1,0 +1,17 @@
+.git
+.tooling
+**/.git
+**/.gradle
+**/build
+**/.env
+**/.env.*
+**/.aws
+**/.codex
+**/.agents
+**/*.pem
+**/*.key
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/*.tfvars
+**/*.tfvars.json

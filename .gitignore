@@ -6,6 +6,8 @@
 .vscode/
 *.iml
 *.class
+__pycache__/
+*.py[cod]
 .DS_Store
 Thumbs.db
 
