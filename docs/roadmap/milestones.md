@@ -10,7 +10,7 @@ Delivery proceeds sequentially through the milestones below. Completion claims m
 | 3 — Distributed workers | RabbitMQ, task generation, retries, dead letters, idempotent results | Duplicate-delivery and worker-crash recovery tests |
 | 4 — Local Kubernetes | Containers, kind, Helm, KEDA | Reproducible local deployment and verified probes/resources/scaling |
 | 5 — Observability and benchmarking | Prometheus, Grafana, load tests | Recorded 1/2/4/8-worker throughput, latency, failures, CPU and queue metrics |
-| 6 — Optional AWS | Terraform, disposable EKS, IAM, cloud storage | Explicit deployment approval, cost estimate, teardown and billing-resource verification |
+| 6 — Optional AWS | Terraform, disposable EKS, IAM, cloud storage | Validated configuration, cost estimate, teardown and billing-resource verification instructions; provisioning only with separate approval |
 | 7 — Dashboard | Next.js dataset/job/results/strategy comparison UI | Tested user flows against the established API |
 
 ## Milestone 1 implementation
@@ -19,8 +19,9 @@ The engine includes immutable price/configuration/result models, strict CSV inge
 
 ## Remaining sequence
 
-1. Verify Milestone 1 before introducing API/database dependencies.
-2. Add dataset registration, asynchronous job contracts, durable persistence, REST endpoints, and real PostgreSQL integration tests.
-3. Verify each later milestone before introducing the next layer. Cloud provisioning remains separately approved.
+Milestones 0–5 have passed their recorded acceptance gates. Prepare validated optional AWS infrastructure.
+The user explicitly selected unprovisioned AWS: record configuration validation separately
+from unperformed cloud deployment and continue to the Next.js dashboard after that gate.
 
-Any reprioritization should update this roadmap and the README together. No paid market data, cloud resources, or frontend scaffolding is needed to finish the engine.
+Any reprioritization should update this roadmap and the README together. Cloud provisioning
+remains separately approved; local development requires no paid market data or AWS credentials.

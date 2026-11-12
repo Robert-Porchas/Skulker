@@ -76,3 +76,13 @@ Cloud provisioning remains separately authorized and must include cost and teard
 - Deployment checks identified and fixed BusyBox checksum-option portability, cross-namespace broker DNS, and initial database DNS/readiness retries. A wrapper execution disrupted by editing its live source was rerun unchanged and completed successfully before acceptance.
 - Evidence: ignored `.tooling/kubernetes-smoke.json`, collected 2026-11-12 02:05–02:07 UTC. This is an autoscaling acceptance check, not a 1/2/4/8 throughput comparison.
 - Native WSL Docker access was restored and verified during this milestone. All resources remain local; no registry pushes or cloud resources.
+
+## Milestone 5 — passed
+
+- Native Java 21 `./gradlew --no-daemon spotlessApply build` passed: 314 tests, zero failures/errors/skips, including real PostgreSQL/RabbitMQ integration tests. Formatting, compiler lint, Helm off/on lint/render, shell/Python checks, and combined review passed.
+- Private Prometheus/Grafana deployed successfully. `python3 scripts/monitoring-smoke.py --timeout-seconds 180` passed live API/broker scrapes, all six durable status gauges, authenticated datasource health, and the 12-panel operations dashboard.
+- Actual service-account authorization permits namespaced EndpointSlice/pod discovery and denies Secret/node reads. Grafana automatic plugin preinstallation/updates are disabled; credentials are preserved separately from Helm values.
+- `python3 scripts/benchmark-workers.py --trials 3 --timeout-seconds 5400` passed all twelve 100-task trials and four 16-task warmups at exact 1/2/4/8 Ready worker counts. All 1,264 tasks succeeded; CPU samples and queue depths were measured. KEDA settings were restored and workers returned to zero.
+- Median throughput: 6.69/10.69/10.51/9.59 tasks per second for 1/2/4/8 workers. The [benchmark report](worker-benchmark.md) records environment, latency, CPU, queue peaks, evidence hashes, and interpretation limits.
+- Load preparation exposed a 100-job page memory failure; metadata projections fixed it. The repeated live request passed in 49 ms within the same 512 MiB API limit. Updated application and monitoring pods had zero restarts after acceptance.
+- Independent agents implemented/reviewed metrics, projections, monitoring, smoke checks, and benchmark safety; root reviewed integration and ran the actual checks. Only local resources and authorized local commits were used.
