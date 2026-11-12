@@ -7,15 +7,19 @@ trades or connect to brokerages. Historical performance does not predict future 
 ## Current implementation
 
 Milestone 0 establishes the Java build, repository conventions, CI, and architecture
-documentation. The first Milestone 1 slice provides:
+documentation. Milestone 1 provides:
 
 - Immutable, validated `PriceBar` and `HistoricalPriceSeries` models
-- Daily simple returns and simple moving averages
+- Strict historical CSV ingestion with row-numbered validation errors
+- Daily/cumulative returns, simple moving averages, rolling sample volatility, and drawdown
+- Long-only SMA crossover simulation with next-open execution and fixed fees
+- Immutable trades, equity curves, performance metrics, and deterministic execution metadata
 - Explicit unavailable values for warmup periods
 - Deterministic JUnit 5 tests using small in-memory fixtures
 
-CSV ingestion, complete backtesting, services, persistence, messaging,
-infrastructure, and a dashboard are planned; they are not implemented.
+Services, persistence, messaging, infrastructure, and a dashboard are planned;
+they are not implemented yet. Milestone check results are recorded in the
+[verification record](docs/development/verification.md).
 
 ## Architecture and stack
 
@@ -85,14 +89,29 @@ first `window - 1` SMA values are `OptionalDouble.empty()`. Missing dates are no
 filled. Decimal arithmetic precedes conversion to finite `double` indicator values;
 see [precision and edge cases](docs/architecture/calculations.md).
 
-These initial indicators do not adjust returns for splits or dividends, simulate
-trades, or establish profitability.
+The crossover simulator uses exact decimal comparisons, whole-share sizing, and
+completed-close signals executed at the next available open. Open terminal
+positions remain marked at the last close. Fees and cash use exact decimal
+arithmetic. Annualization uses ACT/365.25; maximum drawdown is a positive loss
+magnitude. The engine does not adjust for splits/dividends or model slippage,
+spread, or market impact. See the complete execution policies linked above.
+
+For a small deterministic input, see the [sample CSV and schema](datasets/samples/README.md).
+An in-process run uses:
+
+```java
+var prices = new CsvPriceParser().parse("TEST", reader);
+var config = new StrategyConfiguration(10, 50, new BigDecimal("10000"), new BigDecimal("1"));
+var result = new MovingAverageBacktester().run(prices, config);
+```
+
+These classes reside in `dev.skulker.engine.csv` and `dev.skulker.engine.backtest`;
+the caller supplies and closes `reader`. Synthetic tests verify behavior and do
+not establish profitability.
 
 ## Development roadmap
 
-Next, complete Milestone 1 with CSV validation, cumulative returns, volatility,
-drawdown, crossover signals, next-open execution, portfolio simulation, and metrics.
-Only then introduce the API/database, reliable distributed workers, local Kubernetes,
+After Milestone 1 verification, introduce the API/database, reliable distributed workers, local Kubernetes,
 observability/benchmarks, optional AWS deployment, and dashboard in that order.
 See [milestones and acceptance criteria](docs/roadmap/milestones.md).
 

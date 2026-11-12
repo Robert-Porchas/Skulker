@@ -1,12 +1,14 @@
 # Skulker engineering instructions
 
 Skulker is a historical financial research and backtesting platform. The current
-implementation is a pure Java 21 library, not a live-trading system.
+implementation starts with a pure Java 21 library, not a live-trading system.
 
 - `backend/financial-engine` owns immutable price models and deterministic calculations.
-  Keep it free of Spring, persistence, messaging, network access, and system-clock dependencies.
-- Add API, worker, shared contracts, and infrastructure only when their milestone is authorized.
-  Do not create empty placeholder modules or a frontend in the current milestone.
+  Keep calculations free of Spring, persistence, messaging, I/O, network access, and system-clock dependencies.
+  The CSV adapter accepts a caller-owned Reader; it does not open files or access storage itself.
+- Work through authorized milestones sequentially. Record each acceptance gate in
+  `docs/development/verification.md` before starting the next milestone.
+  Add concrete modules as needed; do not create empty placeholder modules.
 - Read `docs/architecture/` and relevant ADRs before changing contracts or conventions.
 
 ## Build and validation

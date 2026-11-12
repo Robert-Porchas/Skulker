@@ -9,9 +9,9 @@ backend/                       Gradle multi-project root
 └── financial-engine/          Pure Java 21 library and JUnit 5 tests
 ```
 
-The engine owns validated historical prices and deterministic calculations. It accepts immutable in-memory data and returns values without network, filesystem, clock, or framework dependencies. This makes the same calculations usable from unit tests, a future API, and future distributed workers.
+The engine owns validated historical prices and deterministic calculations. The calculation core accepts immutable in-memory data and returns values without network, filesystem, clock, or framework dependencies. A separate CSV adapter consumes a caller-owned Reader. This makes the same calculations usable from unit tests, a future API, and future distributed workers.
 
-`PriceBar` represents one symbol and trading date, with decimal OHLC prices, nonnegative integral volume, and optional adjusted close. `HistoricalPriceSeries` establishes a single-symbol, strictly chronological, immutable collection. `FinancialIndicators` calculates daily simple returns and simple moving averages using raw closing prices. See [calculation conventions](calculations.md).
+`PriceBar` represents one symbol and trading date, with decimal OHLC prices, nonnegative integral volume, and optional adjusted close. `HistoricalPriceSeries` establishes a single-symbol, strictly chronological, immutable collection. `FinancialIndicators` calculates returns, moving averages, sample volatility, and drawdown. `MovingAverageBacktester` simulates a long-only crossover strategy with next-open execution, whole shares, exact decimal cash accounting, and immutable results. See [calculation conventions](calculations.md).
 
 There is only one implemented module. Shared build settings live in the Gradle root; convention plugins and shared-domain interfaces should be introduced only when multiple concrete consumers need them.
 

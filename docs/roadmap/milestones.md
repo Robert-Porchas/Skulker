@@ -1,6 +1,6 @@
 # Incremental roadmap
 
-The initial delivery covers the repository foundation and a small financial-engine slice. Completion claims must be backed by executed validation; the broader Milestone 1 remains open.
+Delivery proceeds sequentially through the milestones below. Completion claims must be backed by executed validation in the [verification record](../development/verification.md).
 
 | Milestone | Scope | Acceptance gate |
 | --- | --- | --- |
@@ -13,15 +13,14 @@ The initial delivery covers the repository foundation and a small financial-engi
 | 6 — Optional AWS | Terraform, disposable EKS, IAM, cloud storage | Explicit deployment approval, cost estimate, teardown and billing-resource verification |
 | 7 — Dashboard | Next.js dataset/job/results/strategy comparison UI | Tested user flows against the established API |
 
-## Initial Milestone 1 slice
+## Milestone 1 implementation
 
-Implemented scope is limited to `PriceBar`, `HistoricalPriceSeries`, simple moving average, daily simple returns, and deterministic unit tests. It does not constitute a usable trading-strategy backtester.
+The engine includes immutable price/configuration/result models, strict CSV ingestion, daily and cumulative returns, SMA, rolling sample volatility, maximum drawdown, long-only crossover simulation, exact decimal accounting, trade history, equity curves, performance metrics, and deterministic tests. Its acceptance gate is recorded separately after integrated checks pass.
 
-## Recommended next session
+## Remaining sequence
 
-1. Add a CSV reader with a documented schema, explicit symbol input, row-numbered errors, strict numeric/date parsing, blank-row policy, and rejection of duplicate or unsorted dates. Keep ingestion outside the calculation methods.
-2. Add cumulative returns, rolling volatility, and maximum drawdown with explicit warm-up and population/sample conventions and hand-calculated tests.
-3. Define immutable strategy configuration and result models, fee and sizing policies, and completed-bar/next-open execution tests before implementing the crossover simulator.
-4. Complete Milestone 1 acceptance criteria before starting API or infrastructure work.
+1. Verify Milestone 1 before introducing API/database dependencies.
+2. Add dataset registration, asynchronous job contracts, durable persistence, REST endpoints, and real PostgreSQL integration tests.
+3. Verify each later milestone before introducing the next layer. Cloud provisioning remains separately approved.
 
 Any reprioritization should update this roadmap and the README together. No paid market data, cloud resources, or frontend scaffolding is needed to finish the engine.
