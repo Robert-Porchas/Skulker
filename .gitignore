@@ -6,6 +6,12 @@
 .vscode/
 *.iml
 *.class
+**/node_modules/
+**/.next/
+**/*.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
+frontend/next-env.d.ts
 __pycache__/
 *.py[cod]
 .DS_Store
