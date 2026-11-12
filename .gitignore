@@ -1,0 +1,36 @@
+# Build and local tooling
+**/.gradle/
+**/build/
+.tooling/
+.idea/
+.vscode/
+*.iml
+*.class
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+
+# Future infrastructure state
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Keep datasets small and explicitly selected
+/datasets/*
+!/datasets/samples/
+/datasets/samples/*
+!/datasets/samples/README.md
+!/datasets/samples/*.csv
