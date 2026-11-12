@@ -2,6 +2,9 @@
 .tooling
 **/.git
 **/.gradle
+**/.terraform
+**/node_modules
+**/.next
 **/build
 **/.env
 **/.env.*

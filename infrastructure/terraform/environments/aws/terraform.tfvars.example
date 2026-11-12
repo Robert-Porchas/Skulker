@@ -1,0 +1,14 @@
+# NONDEPLOYABLE EXAMPLE. Replace placeholders before planning; provisioning requires explicit approval.
+# Account/role/CIDR below are documentation fixtures, not account discovery results.
+expected_account_id = "111122223333"
+admin_role_arn      = "arn:aws:iam::111122223333:role/SkulkerOperator"
+operator_ipv4_cidrs = ["203.0.113.42/32"]
+bucket_name         = "replace-with-a-globally-unique-skulker-bucket"
+
+# Resolve exact versions for EKS 1.36 in the chosen region before a future cloud plan.
+node_ami_release_version         = "REPLACE_WITH_COMPATIBLE_AL2023_RELEASE"
+vpc_cni_addon_version            = "REPLACE_WITH_COMPATIBLE_VPC_CNI_EKSBUILD"
+pod_identity_agent_addon_version = "REPLACE_WITH_COMPATIBLE_POD_IDENTITY_EKSBUILD"
+
+# Defaults: us-east-1, us-east-1a/us-east-1b, name skulker-research,
+# one t3.medium with 20 GiB encrypted gp3 and standard CPU credits; maximum two nodes.

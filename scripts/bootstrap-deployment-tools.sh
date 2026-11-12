@@ -7,7 +7,8 @@ tooling_dir="$repo_root/.tooling/bin"
 
 # Binary downloads and hashes are pinned in this development-only tools image.
 tar -C "$repo_root" --exclude='*/.git' --exclude='*/.tooling' --exclude='*/build' \
-  --exclude='*/.gradle' --exclude='*/.env' --exclude='*/.env.*' --exclude='*/.aws' \
+  --exclude='*/.gradle' --exclude='*/.terraform' --exclude='*/node_modules' --exclude='*/.next' \
+  --exclude='*/.env' --exclude='*/.env.*' --exclude='*/.aws' --exclude='*.tfvars' --exclude='*.tfvars.json' \
   --exclude='*.key' --exclude='*.pem' --exclude='*.tfstate' --exclude='*.tfstate.*' \
   -cf - . | "$docker_command" build -f infrastructure/docker/Dockerfile.tools -t skulker-tools:local -
 
