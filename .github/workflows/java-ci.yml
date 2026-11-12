@@ -36,3 +36,26 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Compile, test, check formatting, and build
         run: ./gradlew --no-daemon clean build
+  infrastructure:
+    name: Infrastructure validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build pinned local deployment tools
+        run: docker build -f infrastructure/docker/Dockerfile.tools -t skulker-tools:ci .
+      - name: Validate Helm chart
+        run: docker run --rm --entrypoint helm skulker-tools:ci lint infrastructure/helm/skulker
+      - name: Validate deployment scripts and render both scaling modes
+        run: |
+          docker run --rm --entrypoint bash skulker-tools:ci -ec '
+            for script in scripts/*.sh; do bash -n "$script"; done
+            python3 -m py_compile scripts/kubernetes-smoke.py
+            helm template skulker infrastructure/helm/skulker --namespace skulker > /tmp/autoscale.yaml
+            helm template skulker infrastructure/helm/skulker --namespace skulker --set autoscaling.enabled=false > /tmp/fixed-workers.yaml
+          '
+      - name: Build API and worker runtime images without publishing
+        run: bash scripts/build-images.sh

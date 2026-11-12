@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Skulker local deployment values",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "existingSecret",
+    "api",
+    "worker",
+    "postgres",
+    "rabbitmq",
+    "autoscaling",
+    "terminationGracePeriodSeconds"
+  ],
+  "properties": {
+    "nameOverride": {
+      "type": "string",
+      "maxLength": 50,
+      "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "maxLength": 50,
+      "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+    },
+    "existingSecret": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253,
+      "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+    },
+    "api": {
+      "$ref": "#/definitions/application"
+    },
+    "worker": {
+      "$ref": "#/definitions/application"
+    },
+    "postgres": {
+      "$ref": "#/definitions/statefulService"
+    },
+    "rabbitmq": {
+      "$ref": "#/definitions/statefulService"
+    },
+    "terminationGracePeriodSeconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 300
+    },
+    "autoscaling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "minReplicas",
+        "maxReplicas",
+        "pollingInterval",
+        "cooldownPeriod",
+        "queueValue"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "minReplicas": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "maxReplicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "pollingInterval": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "cooldownPeriod": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 600
+        },
+        "queueValue": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    }
+  },
+  "definitions": {
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "tag",
+        "pullPolicy"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/:-]*$"
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^$|^sha256:[a-f0-9]{64}$"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "resourcePair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu",
+        "memory"
+      ],
+      "properties": {
+        "cpu": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*m?$"
+        },
+        "memory": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(Mi|Gi)$"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requests",
+        "limits"
+      ],
+      "properties": {
+        "requests": {
+          "$ref": "#/definitions/resourcePair"
+        },
+        "limits": {
+          "$ref": "#/definitions/resourcePair"
+        }
+      }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "replicas",
+        "image",
+        "resources"
+      ],
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "image": {
+          "$ref": "#/definitions/image"
+        },
+        "resources": {
+          "$ref": "#/definitions/resources"
+        }
+      }
+    },
+    "statefulService": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image",
+        "persistence",
+        "resources"
+      ],
+      "properties": {
+        "image": {
+          "$ref": "#/definitions/image"
+        },
+        "resources": {
+          "$ref": "#/definitions/resources"
+        },
+        "persistence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size",
+            "storageClass"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*(Mi|Gi)$"
+            },
+            "storageClass": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
