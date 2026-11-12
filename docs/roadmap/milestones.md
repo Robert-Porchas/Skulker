@@ -19,9 +19,9 @@ The engine includes immutable price/configuration/result models, strict CSV inge
 
 ## Remaining sequence
 
-Milestones 0–5 have passed their recorded acceptance gates. Prepare validated optional AWS infrastructure.
-The user explicitly selected unprovisioned AWS: record configuration validation separately
-from unperformed cloud deployment and continue to the Next.js dashboard after that gate.
+Milestones 0–5 have passed their recorded acceptance gates. Milestone 6 passed its
+unprovisioned configuration gate, with cloud runtime deployment explicitly deferred by the user.
+Continue to the Next.js dashboard and test its user flows against the established API.
 
 Any reprioritization should update this roadmap and the README together. Cloud provisioning
 remains separately approved; local development requires no paid market data or AWS credentials.

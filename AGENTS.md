@@ -60,6 +60,10 @@ See `docs/development/local-api.md` for Docker Desktop verification and local AP
 
 Local development must not require AWS credentials. Cloud resources, deployments,
 and `terraform apply` require explicit approval plus a cost estimate and teardown plan.
+Validate optional AWS configuration with `scripts/bootstrap-terraform.sh` then
+`scripts/verify-terraform.sh`; the latter uses only mock-provider plans and no AWS credentials.
+Keep provider lockfiles tracked and Terraform state, plans, and real variable files ignored.
+Do not treat mock validation as evidence that an AWS cluster or application was deployed.
 Do not add live trading, broker integration, or real-money execution.
 Local deployment commands are `scripts/bootstrap-deployment-tools.sh`, `scripts/build-images.sh`,
 and `scripts/local-cluster.sh create|deploy|status`. Keep kubeconfig/credentials in ignored tooling

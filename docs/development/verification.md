@@ -86,3 +86,12 @@ Cloud provisioning remains separately authorized and must include cost and teard
 - Median throughput: 6.69/10.69/10.51/9.59 tasks per second for 1/2/4/8 workers. The [benchmark report](worker-benchmark.md) records environment, latency, CPU, queue peaks, evidence hashes, and interpretation limits.
 - Load preparation exposed a 100-job page memory failure; metadata projections fixed it. The repeated live request passed in 49 ms within the same 512 MiB API limit. Updated application and monitoring pods had zero restarts after acceptance.
 - Independent agents implemented/reviewed metrics, projections, monitoring, smoke checks, and benchmark safety; root reviewed integration and ran the actual checks. Only local resources and authorized local commits were used.
+
+## Milestone 6 — unprovisioned configuration gate passed
+
+- The user explicitly selected unprovisioned AWS and continuation to the dashboard. Cloud provisioning and runtime application acceptance are therefore deferred, not claimed as completed deployments.
+- `bash scripts/bootstrap-terraform.sh` installed checksum-pinned Terraform 1.17.2. `bash scripts/verify-terraform.sh` passed recursive formatting, provider initialization with no backend initialization/read-only lockfile, schema validation, and thirteen plan-only mocked AWS tests (zero failed/skipped). AWS provider 6.72.0 is locked with official platform checksums.
+- Tests cover public/no-NAT routing, explicit restricted EKS access, no implicit creator administration, bounded nodes, IMDSv2, encrypted gp3, standard credits, exact CNI/Pod Identity trust scopes, private versioned TLS-only S3, and unsafe-input rejection. The initial nested mock-data shape failure was corrected before the canonical integrated run passed.
+- Independent review found no blocking source or documentation issue. Shell syntax/ShellCheck, repository formatting, and combined diff passed. CI uses the same mock-only verifier and receives no AWS credentials.
+- [ADR-008](../adr/008-optional-aws-foundation.md) is accepted for the architectural boundary. The [AWS guide](aws.md) records official source-backed costs, state prerequisites, explicit version resolution, teardown order, and remaining-resource/billing verification.
+- No AWS credentials, account APIs, real cloud plans, applies, resources, registry pushes, or deployments were used. Local kind remains the verified application runtime. Cloud storage integration, CSI/application deployment, and regional compatibility remain future approved work.

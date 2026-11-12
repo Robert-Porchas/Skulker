@@ -22,8 +22,9 @@ documentation. Milestone 1 provides:
 - Atomic parameter-sweep batches with independently executable dataset/window combinations
 - Nonroot application images, local kind/Helm deployment, and KEDA RabbitMQ scaling configuration
 - Private Prometheus/Grafana monitoring, durable job metrics, and controlled worker benchmarks
+- Optional AWS Terraform foundation with credential-free mock-provider validation
 
-Optional AWS infrastructure and a dashboard are planned.
+AWS provisioning remains unperformed and requires separate approval. A dashboard is planned.
 Milestone check results, including pending integration gates, are recorded in the
 [verification record](docs/development/verification.md).
 
@@ -46,7 +47,7 @@ docs/
   development/                Validation and contribution workflow
   roadmap/                    Milestones and acceptance criteria
 .github/                      Java CI and PR template
-infrastructure/               Local Helm chart, pinned kind configuration, deployment tools
+infrastructure/               Local Helm chart, pinned kind configuration, optional AWS Terraform
 scripts/                      Image builds, guarded deployment, and smoke/scaling verification
 ```
 
@@ -59,8 +60,8 @@ The current stack is Java 21, Gradle 9.6.1 with Kotlin DSL, JUnit 5.14.4 for the
 Spring Boot 4.1.2, Boot-managed JUnit 6 service tests, PostgreSQL/Flyway, Docker Compose,
 RabbitMQ 4.3.7, and Spotless. Boot 3.5 ended OSS support; the [framework ADR](docs/adr/001-java-21-and-spring-boot.md)
 explains the supported-version deviation. Local deployment uses kind 0.33.0, Kubernetes 1.36.4,
-Helm 4.3.1, KEDA 2.21.0, Prometheus 3.16.0, and Grafana 13.3.1. Terraform/AWS and Next.js/TypeScript
-come in later milestones.
+Helm 4.3.1, KEDA 2.21.0, Prometheus 3.16.0, Grafana 13.3.1, and optional Terraform 1.17.2
+with AWS provider 6.72.0. Next.js/TypeScript comes in the dashboard milestone.
 
 ## Local setup and checks
 
@@ -98,6 +99,8 @@ Windows CLI when a Linux Docker socket is unavailable.
 For the local Kubernetes workflow, see [kind, Helm, and KEDA development](docs/development/kubernetes.md).
 See [observability and controlled benchmarks](docs/development/observability.md) to enable
 private monitoring and measure worker performance.
+See [optional AWS configuration, costs, and teardown](docs/development/aws.md) for Terraform
+validation. Its mock tests need no AWS account or credentials and create no cloud resources.
 
 GitHub Actions runs the build for pull requests and pushes to `main` using Java 21,
 SHA-pinned actions, Gradle caching, and read-only repository permissions.
@@ -138,8 +141,8 @@ not establish profitability.
 ## Development roadmap
 
 Milestones 0–5 are verified, including the [measured worker comparison](docs/development/worker-benchmark.md).
-Next, prepare validated optional AWS infrastructure without provisioning resources, then
-implement the dashboard. AWS deployment requires separate approval.
+Milestone 6 passed credential-free Terraform validation; AWS remains unprovisioned by choice.
+Next, implement the dashboard. AWS deployment requires separate approval.
 See [milestones and acceptance criteria](docs/roadmap/milestones.md).
 
 Use short-lived feature branches and small Conventional Commits. Commits, pushes,
