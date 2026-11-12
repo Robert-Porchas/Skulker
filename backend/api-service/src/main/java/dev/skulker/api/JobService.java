@@ -53,7 +53,7 @@ public class JobService {
 
   public List<JobResponse> list(int limit, int offset) {
     DatasetService.validatePage(limit, offset);
-    return store.listJobs(limit, offset).stream().map(JobResponse::from).toList();
+    return store.listJobSummaries(limit, offset).stream().map(JobResponse::from).toList();
   }
 
   public BacktestResult result(UUID id) {

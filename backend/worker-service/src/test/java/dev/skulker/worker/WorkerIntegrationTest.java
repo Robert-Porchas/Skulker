@@ -22,6 +22,7 @@ import dev.skulker.store.JobRecord;
 import dev.skulker.store.JobStatus;
 import dev.skulker.store.JobStore;
 import dev.skulker.store.OutboxRecord;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -116,6 +117,7 @@ class WorkerIntegrationTest {
   @Autowired private RabbitAdmin admin;
   @Autowired private RabbitListenerEndpointRegistry listeners;
   @Autowired private MutableClock clock;
+  @Autowired private MeterRegistry metrics;
 
   @BeforeEach
   void resetDurableStateAndQueues() throws Exception {
@@ -160,6 +162,10 @@ class WorkerIntegrationTest {
   @Test
   void committedOutboxPublishesPersistentTaskAndAcknowledgesOnlyAfterResultCommit()
       throws Exception {
+    double publishedBefore = counter("skulker.outbox.published");
+    double succeededBefore = counter("skulker.tasks.succeeded");
+    long durationBefore = timerCount("skulker.task.duration", "succeeded");
+    long publicationBefore = timerCount("skulker.outbox.publish.duration", "confirmed");
     JobRecord job = createJob(CONFIGURATION);
     assertEquals(JobStatus.PENDING, store.findJob(job.id()).orElseThrow().status());
     assertEquals(
@@ -169,6 +175,8 @@ class WorkerIntegrationTest {
 
     assertTrue(dispatcher.dispatchOne());
     assertEquals(JobStatus.QUEUED, store.findJob(job.id()).orElseThrow().status());
+    assertEquals(publishedBefore + 1, counter("skulker.outbox.published"));
+    assertEquals(publicationBefore + 1, timerCount("skulker.outbox.publish.duration", "confirmed"));
 
     try (Connection connection = connection();
         Channel channel = connection.createChannel()) {
@@ -184,11 +192,16 @@ class WorkerIntegrationTest {
           json.readTree(completed.resultJson()).get("finalPortfolioValue").decimalValue());
       assertEquals(1, completed.attempts());
       assertAcknowledged(channel);
+      assertEquals(succeededBefore + 1, counter("skulker.tasks.succeeded"));
+      assertEquals(durationBefore + 1, timerCount("skulker.task.duration", "succeeded"));
+      assertEquals(0, metrics.get("skulker.tasks.active").gauge().value());
     }
   }
 
   @Test
   void duplicateTaskDeliveryDoesNotComputeOrCommitASecondResult() throws Exception {
+    double succeededBefore = counter("skulker.tasks.succeeded");
+    double duplicateBefore = counter("skulker.tasks.duplicates");
     JobRecord job = createJob(CONFIGURATION);
     assertTrue(dispatcher.dispatchOne());
     try (Connection connection = connection();
@@ -205,6 +218,9 @@ class WorkerIntegrationTest {
       assertEquals(1, afterDuplicate.attempts());
       assertEquals(committed, afterDuplicate.resultJson());
       assertAcknowledged(channel);
+      assertEquals(succeededBefore + 1, counter("skulker.tasks.succeeded"));
+      assertEquals(duplicateBefore + 1, counter("skulker.tasks.duplicates"));
+      assertEquals(0, metrics.get("skulker.tasks.active").gauge().value());
     }
   }
 
@@ -293,6 +309,10 @@ class WorkerIntegrationTest {
 
   @Test
   void failedCalculationsRetryThreeTimesThenPublishDurableDeadLetter() throws Exception {
+    double retriedBefore = counter("skulker.tasks.retried");
+    double failedBefore = counter("skulker.tasks.failed");
+    long retryDurationBefore = timerCount("skulker.task.duration", "retry");
+    long failedDurationBefore = timerCount("skulker.task.duration", "failed");
     JobRecord job = createJob("{}");
     try (Connection connection = connection();
         Channel channel = connection.createChannel()) {
@@ -315,11 +335,17 @@ class WorkerIntegrationTest {
       channel.basicAck(deadLetter.getEnvelope().getDeliveryTag(), false);
       assertFalse(dispatcher.dispatchOne());
       assertAcknowledged(channel);
+      assertEquals(retriedBefore + 2, counter("skulker.tasks.retried"));
+      assertEquals(failedBefore + 1, counter("skulker.tasks.failed"));
+      assertEquals(retryDurationBefore + 2, timerCount("skulker.task.duration", "retry"));
+      assertEquals(failedDurationBefore + 1, timerCount("skulker.task.duration", "failed"));
+      assertEquals(0, metrics.get("skulker.tasks.active").gauge().value());
     }
   }
 
   @Test
   void poisonPayloadUsesBrokerDeadLetterRouteWithoutCreatingAJob() throws Exception {
+    double rejectedBefore = counter("skulker.tasks.rejected");
     byte[] poison = "not-json".getBytes(StandardCharsets.UTF_8);
     try (Connection connection = connection();
         Channel channel = connection.createChannel()) {
@@ -332,11 +358,16 @@ class WorkerIntegrationTest {
       channel.basicAck(deadLetter.getEnvelope().getDeliveryTag(), false);
       assertTrue(store.listJobs(100, 0).isEmpty());
       assertAcknowledged(channel);
+      assertEquals(rejectedBefore + 1, counter("skulker.tasks.rejected"));
+      assertEquals(0, metrics.get("skulker.tasks.active").gauge().value());
     }
   }
 
   @Test
   void unroutablePublicationRemainsDurableAndRetriesAfterBindingIsRestored() throws Exception {
+    double retriedBefore = counter("skulker.outbox.retried");
+    double publishedBefore = counter("skulker.outbox.published");
+    long retryDurationBefore = timerCount("skulker.outbox.publish.duration", "retry");
     JobRecord job = createJob(CONFIGURATION);
     try (Connection connection = connection();
         Channel channel = connection.createChannel()) {
@@ -345,6 +376,10 @@ class WorkerIntegrationTest {
       try {
         dispatcher.dispatchOne();
         assertEquals(JobStatus.PENDING, store.findJob(job.id()).orElseThrow().status());
+        assertEquals(publishedBefore, counter("skulker.outbox.published"));
+        assertEquals(retriedBefore + 1, counter("skulker.outbox.retried"));
+        assertEquals(
+            retryDurationBefore + 1, timerCount("skulker.outbox.publish.duration", "retry"));
       } finally {
         channel.queueBind(
             RabbitNames.TASK_QUEUE, RabbitNames.TASK_EXCHANGE, RabbitNames.TASK_ROUTING_KEY);
@@ -352,6 +387,7 @@ class WorkerIntegrationTest {
       clock.advance(Duration.ofSeconds(2));
       assertTrue(dispatcher.dispatchOne());
       assertEquals(JobStatus.QUEUED, store.findJob(job.id()).orElseThrow().status());
+      assertEquals(publishedBefore + 1, counter("skulker.outbox.published"));
       GetResponse delivery = nextDelivery(channel, RabbitNames.TASK_QUEUE);
       assertEquals(job.id(), json.readValue(delivery.getBody(), BacktestTaskMessage.class).jobId());
       processor.handle(message(delivery), channel);
@@ -371,6 +407,14 @@ class WorkerIntegrationTest {
             LocalDate.of(2024, 1, 9),
             clock.instant());
     return store.createJob(dataset.id(), configuration, clock.instant());
+  }
+
+  private double counter(String name) {
+    return metrics.get(name).counter().count();
+  }
+
+  private long timerCount(String name, String outcome) {
+    return metrics.get(name).tag("outcome", outcome).timer().count();
   }
 
   private String completedResult() throws Exception {

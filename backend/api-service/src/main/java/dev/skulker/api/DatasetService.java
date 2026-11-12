@@ -117,7 +117,7 @@ public class DatasetService {
 
   public List<DatasetResponse> list(int limit, int offset) {
     validatePage(limit, offset);
-    return store.listDatasets(limit, offset).stream().map(DatasetResponse::from).toList();
+    return store.listDatasetSummaries(limit, offset).stream().map(DatasetResponse::from).toList();
   }
 
   static void validatePage(int limit, int offset) {

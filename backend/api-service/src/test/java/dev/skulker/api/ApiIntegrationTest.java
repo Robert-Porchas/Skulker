@@ -17,9 +17,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.skulker.store.DatasetRecord;
+import dev.skulker.store.DatasetSummary;
 import dev.skulker.store.JobRecord;
 import dev.skulker.store.JobStatus;
 import dev.skulker.store.JobStore;
+import dev.skulker.store.JobSummary;
+import dev.skulker.store.OutboxRecord;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -28,6 +31,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
@@ -212,6 +216,108 @@ class ApiIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].id").value(job.id().toString()));
+  }
+
+  @Test
+  void metadataSummariesPreserveOrderingPaginationAndPublicShapeWithLargeStoredPayloads()
+      throws Exception {
+    DatasetRecord olderDataset =
+        store.saveDataset(
+            "OLDER",
+            CSV + "\n".repeat(131072),
+            "a".repeat(64),
+            6,
+            LocalDate.of(2024, 1, 2),
+            LocalDate.of(2024, 1, 9),
+            NOW);
+    DatasetRecord newerDataset =
+        store.saveDataset(
+            "NEWER",
+            CSV,
+            "b".repeat(64),
+            6,
+            LocalDate.of(2024, 1, 2),
+            LocalDate.of(2024, 1, 9),
+            NOW.plusSeconds(1));
+    JobRecord olderJob = store.createJob(olderDataset.id(), CONFIGURATION, NOW.plusSeconds(2));
+    JobRecord newerJob = store.createJob(newerDataset.id(), CONFIGURATION, NOW.plusSeconds(3));
+    JobRecord owner = store.claimJob(olderJob.id(), NOW.plusSeconds(4), LEASE).orElseThrow();
+    assertTrue(
+        store.complete(
+            olderJob.id(),
+            owner.leaseToken(),
+            "{\"historicalPayload\":\"" + "x".repeat(131072) + "\"}",
+            NOW.plusSeconds(5)));
+
+    List<DatasetSummary> datasets = store.listDatasetSummaries(2, 0);
+    assertEquals(
+        List.of(newerDataset.id(), olderDataset.id()),
+        datasets.stream().map(DatasetSummary::id).toList());
+    assertEquals(
+        DatasetResponse.from(olderDataset),
+        DatasetResponse.from(store.listDatasetSummaries(1, 1).getFirst()));
+    List<JobSummary> jobs = store.listJobSummaries(2, 0);
+    assertEquals(List.of(newerJob.id(), olderJob.id()), jobs.stream().map(JobSummary::id).toList());
+    assertEquals(JobStatus.SUCCEEDED, store.listJobSummaries(1, 1).getFirst().status());
+    assertEquals(
+        JobResponse.from(store.findJob(olderJob.id()).orElseThrow()),
+        JobResponse.from(store.listJobSummaries(1, 1).getFirst()));
+    assertThrows(UnsupportedOperationException.class, () -> datasets.clear());
+    assertThrows(UnsupportedOperationException.class, () -> jobs.clear());
+
+    mvc.perform(get("/api/datasets").param("limit", "1").param("offset", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(olderDataset.id().toString()))
+        .andExpect(jsonPath("$[0].csv").doesNotExist());
+    mvc.perform(get("/api/jobs").param("limit", "1").param("offset", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(olderJob.id().toString()))
+        .andExpect(jsonPath("$[0].status").value("SUCCEEDED"))
+        .andExpect(jsonPath("$[0].configurationJson").doesNotExist())
+        .andExpect(jsonPath("$[0].resultJson").doesNotExist())
+        .andExpect(jsonPath("$[0].leaseToken").doesNotExist());
+  }
+
+  @Test
+  void durableStatusCountsIncludeZeroStatesAndEveryPersistedLifecycleState() {
+    Map<JobStatus, Long> initially = store.statusCounts();
+    assertEquals(JobStatus.values().length, initially.size());
+    assertTrue(initially.values().stream().allMatch(count -> count == 0));
+    DatasetRecord dataset =
+        store.saveDataset(
+            "TEST",
+            CSV,
+            "a".repeat(64),
+            6,
+            LocalDate.of(2024, 1, 2),
+            LocalDate.of(2024, 1, 9),
+            NOW);
+    JobRecord queued = store.createJob(dataset.id(), CONFIGURATION, NOW);
+    store.createJob(dataset.id(), CONFIGURATION, NOW.plusSeconds(1));
+    JobRecord running = store.createJob(dataset.id(), CONFIGURATION, NOW.plusSeconds(2));
+    JobRecord succeeded = store.createJob(dataset.id(), CONFIGURATION, NOW.plusSeconds(3));
+    JobRecord failed = store.createJob(dataset.id(), CONFIGURATION, NOW.plusSeconds(4));
+    JobRecord cancelled = store.createJob(dataset.id(), CONFIGURATION, NOW.plusSeconds(5));
+    OutboxRecord publication = store.claimOutbox(NOW.plusSeconds(10), LEASE).orElseThrow();
+    assertEquals(queued.id(), publication.jobId());
+    assertTrue(
+        store.markPublished(publication.id(), publication.leaseToken(), NOW.plusSeconds(10)));
+    store.claimJob(running.id(), NOW.plusSeconds(10), LEASE).orElseThrow();
+    JobRecord successOwner =
+        store.claimJob(succeeded.id(), NOW.plusSeconds(10), LEASE).orElseThrow();
+    assertTrue(
+        store.complete(succeeded.id(), successOwner.leaseToken(), "{}", NOW.plusSeconds(11)));
+    JobRecord failureOwner = store.claimJob(failed.id(), NOW.plusSeconds(10), LEASE).orElseThrow();
+    assertTrue(
+        store.fail(failed.id(), failureOwner.leaseToken(), "BACKTEST_FAILED", NOW.plusSeconds(11)));
+    jdbc.update("UPDATE jobs SET status = 'CANCELLED' WHERE id = ?", cancelled.id());
+
+    Map<JobStatus, Long> counts = store.statusCounts();
+
+    for (JobStatus state : JobStatus.values()) {
+      assertEquals(1L, counts.get(state));
+    }
+    assertThrows(UnsupportedOperationException.class, () -> counts.clear());
   }
 
   @Test

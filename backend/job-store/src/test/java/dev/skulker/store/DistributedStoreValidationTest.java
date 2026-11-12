@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -21,7 +22,8 @@ class DistributedStoreValidationTest {
   private final OutboxRepository outbox = mock(OutboxRepository.class);
   private final BatchRepository batches = mock(BatchRepository.class);
   private final BatchJobRepository batchJobs = mock(BatchJobRepository.class);
-  private final JobStore store = new JobStore(datasets, jobs, outbox, batches, batchJobs);
+  private final JobStore store =
+      new JobStore(datasets, jobs, outbox, batches, batchJobs, mock(EntityManager.class));
 
   @Test
   void batchSpecificationRequiresIdentityAndNonblankConfiguration() {

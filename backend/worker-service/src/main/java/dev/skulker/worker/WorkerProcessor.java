@@ -12,12 +12,16 @@ import dev.skulker.store.DatasetRecord;
 import dev.skulker.store.JobRecord;
 import dev.skulker.store.JobStatus;
 import dev.skulker.store.JobStore;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
 import java.io.StringReader;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
@@ -40,6 +44,13 @@ public class WorkerProcessor {
   private final Clock clock;
   private final Duration leaseDuration;
   private final Duration retryBackoff;
+  private final MeterRegistry registry;
+  private final AtomicInteger active = new AtomicInteger();
+  private final Counter succeeded;
+  private final Counter retried;
+  private final Counter failed;
+  private final Counter duplicates;
+  private final Counter rejected;
   private final CsvPriceParser parser = new CsvPriceParser();
   private final MovingAverageBacktester backtester = new MovingAverageBacktester();
   private final RetryTemplate databaseRetry =
@@ -57,18 +68,29 @@ public class WorkerProcessor {
       JsonMapper mapper,
       Clock clock,
       @Value("${skulker.worker.lease-duration:PT5M}") Duration leaseDuration,
-      @Value("${skulker.worker.retry-backoff:PT1S}") Duration retryBackoff) {
+      @Value("${skulker.worker.retry-backoff:PT1S}") Duration retryBackoff,
+      MeterRegistry registry) {
     this.store = store;
     this.mapper = mapper;
     this.clock = clock;
     this.leaseDuration = Objects.requireNonNull(leaseDuration);
     this.retryBackoff = Objects.requireNonNull(retryBackoff);
+    this.registry = Objects.requireNonNull(registry);
     if (leaseDuration.isNegative()
         || leaseDuration.isZero()
         || leaseDuration.toNanosPart() % 1000 != 0
         || retryBackoff.isNegative()) {
       throw new IllegalArgumentException(
           "Worker lease must be positive with microsecond precision and retry backoff nonnegative");
+    }
+    succeeded = registry.counter("skulker.tasks.succeeded");
+    retried = registry.counter("skulker.tasks.retried");
+    failed = registry.counter("skulker.tasks.failed");
+    duplicates = registry.counter("skulker.tasks.duplicates");
+    rejected = registry.counter("skulker.tasks.rejected");
+    registry.gauge("skulker.tasks.active", active);
+    for (String outcome : new String[] {"succeeded", "retry", "failed", "stale"}) {
+      registry.timer("skulker.task.duration", "outcome", outcome);
     }
   }
 
@@ -88,6 +110,7 @@ public class WorkerProcessor {
     } catch (RuntimeException malformed) {
       LOGGER.atWarn().addKeyValue("deliveryTag", tag).log("Rejected malformed backtest task");
       channel.basicReject(tag, false);
+      rejected.increment();
       return;
     }
     Optional<JobRecord> claim;
@@ -116,6 +139,7 @@ public class WorkerProcessor {
     } catch (UnknownTaskException unknown) {
       LOGGER.atWarn().addKeyValue("jobId", task.jobId()).log("Rejected unknown backtest task");
       channel.basicReject(tag, false);
+      rejected.increment();
       return;
     } catch (RuntimeException failure) {
       requeue(channel, tag, task.jobId().toString(), failure);
@@ -123,10 +147,22 @@ public class WorkerProcessor {
     }
     if (claim.isEmpty()) {
       // Terminal or busy duplicates are covered by durable state and expired-lease recovery.
+      duplicates.increment();
       channel.basicAck(tag, false);
       return;
     }
     JobRecord job = claim.orElseThrow();
+    active.incrementAndGet();
+    Timer.Sample sample = Timer.start(registry);
+    try {
+      executeClaimed(job, channel, tag, sample);
+    } finally {
+      active.decrementAndGet();
+    }
+  }
+
+  private void executeClaimed(JobRecord job, Channel channel, long tag, Timer.Sample sample)
+      throws IOException {
     Optional<DatasetRecord> dataset;
     try {
       dataset = databaseRetry.invoke(() -> store.findDataset(job.datasetId()));
@@ -144,7 +180,7 @@ public class WorkerProcessor {
       BacktestResult result = backtester.run(series, configuration);
       resultJson = mapper.writeValueAsString(result);
     } catch (IOException | RuntimeException failure) {
-      retryJob(job, channel, tag, failure);
+      retryJob(job, channel, tag, failure, sample);
       return;
     }
     boolean committed;
@@ -161,11 +197,17 @@ public class WorkerProcessor {
         .addKeyValue("jobId", job.id())
         .addKeyValue("committed", committed)
         .log("Distributed backtest execution finished");
+    if (committed) {
+      succeeded.increment();
+    }
+    sample.stop(
+        registry.timer("skulker.task.duration", "outcome", committed ? "succeeded" : "stale"));
     // A stale result is deliberately discarded; the current lease holder remains authoritative.
     channel.basicAck(tag, false);
   }
 
-  private void retryJob(JobRecord job, Channel channel, long tag, Exception failure)
+  private void retryJob(
+      JobRecord job, Channel channel, long tag, Exception failure, Timer.Sample sample)
       throws IOException {
     LOGGER
         .atWarn()
@@ -188,8 +230,18 @@ public class WorkerProcessor {
       return;
     }
     if (committed) {
+      // JobStore's accepted execution policy permits at most three claims, including crashes.
+      boolean terminal = job.attempts() >= 3;
+      if (terminal) {
+        failed.increment();
+      } else {
+        retried.increment();
+      }
+      sample.stop(
+          registry.timer("skulker.task.duration", "outcome", terminal ? "failed" : "retry"));
       channel.basicAck(tag, false);
     } else {
+      sample.stop(registry.timer("skulker.task.duration", "outcome", "stale"));
       channel.basicNack(tag, false, true);
     }
   }

@@ -1,11 +1,13 @@
 package dev.skulker.store;
 
+import jakarta.persistence.EntityManager;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,18 +29,21 @@ public class JobStore {
   private final OutboxRepository outbox;
   private final BatchRepository batches;
   private final BatchJobRepository batchJobs;
+  private final EntityManager entityManager;
 
   JobStore(
       DatasetRepository datasets,
       JobRepository jobs,
       OutboxRepository outbox,
       BatchRepository batches,
-      BatchJobRepository batchJobs) {
+      BatchJobRepository batchJobs,
+      EntityManager entityManager) {
     this.datasets = datasets;
     this.jobs = jobs;
     this.outbox = outbox;
     this.batches = batches;
     this.batchJobs = batchJobs;
+    this.entityManager = entityManager;
   }
 
   @Transactional
@@ -90,6 +95,23 @@ public class JobStore {
     return datasets.list(limit, offset).stream().map(DatasetEntity::snapshot).toList();
   }
 
+  /** Reads only metadata columns, so page size does not multiply CSV payload memory. */
+  public List<DatasetSummary> listDatasetSummaries(int limit, int offset) {
+    validatePage(limit, offset);
+    return List.copyOf(
+        entityManager
+            .createQuery(
+                """
+                SELECT new dev.skulker.store.DatasetSummary(
+                    d.id, d.symbol, d.sha256, d.barCount, d.startDate, d.endDate, d.createdAt)
+                FROM DatasetEntity d ORDER BY d.createdAt DESC, d.id
+                """,
+                DatasetSummary.class)
+            .setFirstResult(offset)
+            .setMaxResults(limit)
+            .getResultList());
+  }
+
   @Transactional
   public JobRecord createJob(UUID datasetId, String configurationJson, Instant now) {
     Objects.requireNonNull(datasetId, "datasetId must not be null");
@@ -109,6 +131,40 @@ public class JobStore {
   public List<JobRecord> listJobs(int limit, int offset) {
     validatePage(limit, offset);
     return jobs.list(limit, offset).stream().map(JobEntity::snapshot).toList();
+  }
+
+  /** Reads only status metadata, never materializing configurations or historical results. */
+  public List<JobSummary> listJobSummaries(int limit, int offset) {
+    validatePage(limit, offset);
+    return List.copyOf(
+        entityManager
+            .createQuery(
+                """
+                SELECT new dev.skulker.store.JobSummary(
+                    j.id, j.datasetId, j.status, j.failureCode, j.createdAt, j.updatedAt)
+                FROM JobEntity j ORDER BY j.createdAt DESC, j.id
+                """,
+                JobSummary.class)
+            .setFirstResult(offset)
+            .setMaxResults(limit)
+            .getResultList());
+  }
+
+  /** One aggregate query over durable states; absent states are explicitly represented by zero. */
+  public Map<JobStatus, Long> statusCounts() {
+    Map<JobStatus, Long> counts = new EnumMap<>(JobStatus.class);
+    for (JobStatus status : JobStatus.values()) {
+      counts.put(status, 0L);
+    }
+    List<Object[]> rows =
+        entityManager
+            .createQuery(
+                "SELECT j.status, COUNT(j) FROM JobEntity j GROUP BY j.status", Object[].class)
+            .getResultList();
+    for (Object[] row : rows) {
+      counts.put((JobStatus) row[0], (Long) row[1]);
+    }
+    return Map.copyOf(counts);
   }
 
   /**

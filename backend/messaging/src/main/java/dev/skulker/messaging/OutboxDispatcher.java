@@ -5,6 +5,9 @@ import dev.skulker.domain.RabbitNames;
 import dev.skulker.store.JobStore;
 import dev.skulker.store.OutboxKind;
 import dev.skulker.store.OutboxRecord;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
@@ -33,12 +36,26 @@ public class OutboxDispatcher {
   private final JsonMapper mapper;
   private final RabbitTemplate rabbit;
   private final Clock clock;
+  private final MeterRegistry registry;
+  private final Counter published;
+  private final Counter retried;
 
-  public OutboxDispatcher(JobStore store, JsonMapper mapper, RabbitTemplate rabbit, Clock clock) {
+  public OutboxDispatcher(
+      JobStore store,
+      JsonMapper mapper,
+      RabbitTemplate rabbit,
+      Clock clock,
+      MeterRegistry registry) {
     this.store = store;
     this.mapper = mapper;
     this.rabbit = rabbit;
     this.clock = clock;
+    this.registry = registry;
+    published = registry.counter("skulker.outbox.published");
+    retried = registry.counter("skulker.outbox.retried");
+    for (String outcome : new String[] {"confirmed", "retry", "stale"}) {
+      registry.timer("skulker.outbox.publish.duration", "outcome", outcome);
+    }
   }
 
   /** Returns false when no entry is due; true means one entry was attempted. */
@@ -48,6 +65,7 @@ public class OutboxDispatcher {
       return false;
     }
     OutboxRecord outbox = claim.orElseThrow();
+    Timer.Sample sample = Timer.start(registry);
     try {
       MessageProperties properties = new MessageProperties();
       properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
@@ -73,6 +91,12 @@ public class OutboxDispatcher {
         throw new AmqpException("Publication was not confirmed and routed");
       }
       boolean committed = store.markPublished(outbox.id(), outbox.leaseToken(), clock.instant());
+      if (committed) {
+        published.increment();
+      }
+      sample.stop(
+          registry.timer(
+              "skulker.outbox.publish.duration", "outcome", committed ? "confirmed" : "stale"));
       LOGGER
           .atInfo()
           .addKeyValue("jobId", outbox.jobId())
@@ -81,14 +105,14 @@ public class OutboxDispatcher {
           .log("Outbox publication confirmed");
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      retry(outbox, exception);
+      retry(outbox, exception, sample);
     } catch (ExecutionException | TimeoutException | RuntimeException exception) {
-      retry(outbox, exception);
+      retry(outbox, exception, sample);
     }
     return true;
   }
 
-  private void retry(OutboxRecord outbox, Exception failure) {
+  private void retry(OutboxRecord outbox, Exception failure, Timer.Sample sample) {
     LOGGER
         .atWarn()
         .addKeyValue("jobId", outbox.jobId())
@@ -97,8 +121,15 @@ public class OutboxDispatcher {
         .log("Outbox publication will retry");
     long seconds = Math.min(60, 1L << Math.min(6, Math.max(0, outbox.attempts() - 1)));
     try {
-      store.retryPublication(
-          outbox.id(), outbox.leaseToken(), clock.instant(), Duration.ofSeconds(seconds));
+      boolean committed =
+          store.retryPublication(
+              outbox.id(), outbox.leaseToken(), clock.instant(), Duration.ofSeconds(seconds));
+      if (committed) {
+        retried.increment();
+      }
+      sample.stop(
+          registry.timer(
+              "skulker.outbox.publish.duration", "outcome", committed ? "retry" : "stale"));
     } catch (RuntimeException persistenceFailure) {
       // The outbox lease can be reclaimed after expiry if this write is unavailable.
       LOGGER

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,14 +23,18 @@ class JobStoreValidationTest {
   private final OutboxRepository outbox = mock(OutboxRepository.class);
   private final BatchRepository batches = mock(BatchRepository.class);
   private final BatchJobRepository batchJobs = mock(BatchJobRepository.class);
-  private final JobStore store = new JobStore(datasets, jobs, outbox, batches, batchJobs);
+  private final EntityManager entityManager = mock(EntityManager.class);
+  private final JobStore store =
+      new JobStore(datasets, jobs, outbox, batches, batchJobs, entityManager);
 
   @ParameterizedTest
   @CsvSource({"0,0", "101,0", "1,-1", "-1,1"})
   void rejectsInvalidPaginationBeforeReadingDatabase(int limit, int offset) {
     assertThrows(IllegalArgumentException.class, () -> store.listDatasets(limit, offset));
     assertThrows(IllegalArgumentException.class, () -> store.listJobs(limit, offset));
-    verifyNoInteractions(datasets, jobs);
+    assertThrows(IllegalArgumentException.class, () -> store.listDatasetSummaries(limit, offset));
+    assertThrows(IllegalArgumentException.class, () -> store.listJobSummaries(limit, offset));
+    verifyNoInteractions(datasets, jobs, entityManager);
   }
 
   @ParameterizedTest
