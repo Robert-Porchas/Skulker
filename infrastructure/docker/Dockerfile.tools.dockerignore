@@ -5,6 +5,8 @@
 **/.terraform
 **/node_modules
 **/.next
+**/test-results
+**/playwright-report
 **/build
 **/.env
 **/.env.*
