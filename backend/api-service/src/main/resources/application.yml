@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: skulker-api
+  datasource:
+    url: ${SKULKER_DATABASE_URL:jdbc:postgresql://localhost:5432/skulker}
+    username: ${SKULKER_DATABASE_USERNAME:skulker}
+    password: ${SKULKER_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+logging:
+  structured:
+    format:
+      console: ${LOG_FORMAT:ecs}
+skulker:
+  jobs:
+    local-enabled: ${SKULKER_LOCAL_JOBS_ENABLED:true}
+    poll-delay: ${SKULKER_JOB_POLL_DELAY:1000}

@@ -8,3 +8,5 @@ dependencyResolutionManagement {
 rootProject.name = "skulker"
 
 include("financial-engine")
+
+include("job-store", "api-service")
