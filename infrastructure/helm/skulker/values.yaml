@@ -77,3 +77,36 @@ autoscaling:
   queueValue: 5
 
 terminationGracePeriodSeconds: 90
+
+# Optional, private, disposable monitoring for local development.
+monitoring:
+  enabled: false
+  prometheus:
+    image:
+      repository: prom/prometheus
+      tag: v3.16.0
+      digest: sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+      pullPolicy: IfNotPresent
+    retention: 6h
+    storageSize: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+  grafana:
+    existingSecret: skulker-grafana-credentials
+    image:
+      repository: grafana/grafana
+      tag: 13.3.1
+      digest: sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 384Mi

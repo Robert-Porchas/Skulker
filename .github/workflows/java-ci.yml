@@ -53,9 +53,11 @@ jobs:
         run: |
           docker run --rm --entrypoint bash skulker-tools:ci -ec '
             for script in scripts/*.sh; do bash -n "$script"; done
-            python3 -m py_compile scripts/kubernetes-smoke.py
+            python3 -m py_compile scripts/*.py
             helm template skulker infrastructure/helm/skulker --namespace skulker > /tmp/autoscale.yaml
             helm template skulker infrastructure/helm/skulker --namespace skulker --set autoscaling.enabled=false > /tmp/fixed-workers.yaml
+            helm lint infrastructure/helm/skulker --strict --set monitoring.enabled=true
+            helm template skulker infrastructure/helm/skulker --namespace skulker --set monitoring.enabled=true > /tmp/monitoring.yaml
           '
       - name: Build API and worker runtime images without publishing
         run: bash scripts/build-images.sh

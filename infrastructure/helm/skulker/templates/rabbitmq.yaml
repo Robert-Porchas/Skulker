@@ -1,3 +1,17 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skulker.fullname" . }}-rabbitmq-plugins
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "skulker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_prometheus].
+---
+{{- end }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -19,6 +33,11 @@ spec:
     - name: management
       port: 15672
       targetPort: management
+    {{- if .Values.monitoring.enabled }}
+    - name: metrics
+      port: 15692
+      targetPort: metrics
+    {{- end }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -40,6 +59,10 @@ spec:
       app.kubernetes.io/component: rabbitmq
   template:
     metadata:
+      {{- if .Values.monitoring.enabled }}
+      annotations:
+        checksum/plugins: {{ "[rabbitmq_management,rabbitmq_prometheus]." | sha256sum }}
+      {{- end }}
       labels:
         {{- include "skulker.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: rabbitmq
@@ -68,6 +91,10 @@ spec:
               containerPort: 5672
             - name: management
               containerPort: 15672
+            {{- if .Values.monitoring.enabled }}
+            - name: metrics
+              containerPort: 15692
+            {{- end }}
           env:
             - name: RABBITMQ_DEFAULT_USER
               value: skulker
@@ -107,10 +134,21 @@ spec:
               mountPath: /var/lib/rabbitmq
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.monitoring.enabled }}
+            - name: enabled-plugins
+              mountPath: /etc/rabbitmq/enabled_plugins
+              subPath: enabled_plugins
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 64Mi
+        {{- if .Values.monitoring.enabled }}
+        - name: enabled-plugins
+          configMap:
+            name: {{ include "skulker.fullname" . }}-rabbitmq-plugins
+        {{- end }}
   volumeClaimTemplates:
     - metadata:
         name: data
