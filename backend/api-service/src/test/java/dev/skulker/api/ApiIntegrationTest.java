@@ -54,7 +54,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Tag("integration")
 @Testcontainers
-@SpringBootTest(properties = "skulker.jobs.local-enabled=false")
+@SpringBootTest(
+    properties = {"skulker.jobs.local-enabled=false", "skulker.messaging.enabled=false"})
 @AutoConfigureMockMvc
 class ApiIntegrationTest {
   private static final String CSV =
@@ -93,6 +94,7 @@ class ApiIntegrationTest {
   @BeforeEach
   void clearCommittedData() {
     jdbc.update("DELETE FROM jobs");
+    jdbc.update("DELETE FROM batches");
     jdbc.update("DELETE FROM datasets");
   }
 
@@ -279,6 +281,54 @@ class ApiIntegrationTest {
                 .content(jobRequest(missing, 1, 2)))
         .andExpect(status().isNotFound());
     assertTrue(store.listJobs(100, 0).isEmpty());
+  }
+
+  @Test
+  void batchSubmissionCreatesOnlyValidParameterPairsAndAggregatesCompletedJobs() throws Exception {
+    UUID datasetId = uploadDataset();
+    String request =
+        """
+        {"datasetIds":["%s"],"shortWindows":[1,2,3],"longWindows":[3],"initialCapital":100,"transactionFee":1}
+        """
+            .formatted(datasetId);
+    String response =
+        mvc.perform(post("/api/batches").contentType(MediaType.APPLICATION_JSON).content(request))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.jobIds", hasSize(2)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    UUID batchId = UUID.fromString(json.readTree(response).get("id").asString());
+    assertEquals(2, store.listJobs(100, 0).size());
+
+    assertTrue(runner.runOne());
+    assertTrue(runner.runOne());
+    assertFalse(runner.runOne());
+
+    mvc.perform(get("/api/batches/{id}", batchId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2))
+        .andExpect(jsonPath("$.succeeded").value(2))
+        .andExpect(jsonPath("$.failed").value(0));
+  }
+
+  @Test
+  void unknownDatasetMakesBatchSubmissionAtomicWithoutPartialJobs() throws Exception {
+    UUID datasetId = uploadDataset();
+    UUID missingId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    String request =
+        """
+        {"datasetIds":["%s","%s"],"shortWindows":[1],"longWindows":[2],"initialCapital":100,"transactionFee":1}
+        """
+            .formatted(datasetId, missingId);
+
+    mvc.perform(post("/api/batches").contentType(MediaType.APPLICATION_JSON).content(request))
+        .andExpect(status().isNotFound());
+
+    assertTrue(store.listJobs(100, 0).isEmpty());
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM batches", Integer.class));
+    assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM outbox", Integer.class));
   }
 
   @Test

@@ -10,3 +10,5 @@ rootProject.name = "skulker"
 include("financial-engine")
 
 include("job-store", "api-service")
+
+include("shared-domain", "messaging", "worker-service")

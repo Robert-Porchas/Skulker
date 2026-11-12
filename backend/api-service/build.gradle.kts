@@ -8,6 +8,7 @@ dependencies {
   implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.2"))
   implementation(project(":financial-engine"))
   implementation(project(":job-store"))
+  implementation(project(":messaging"))
   implementation("org.springframework.boot:spring-boot-starter-webmvc")
   implementation("org.springframework.boot:spring-boot-starter-validation")
   implementation("org.springframework.boot:spring-boot-starter-actuator")

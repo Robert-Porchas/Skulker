@@ -19,8 +19,8 @@ interface JobRepository extends JpaRepository<JobEntity, UUID> {
       value =
           """
           SELECT * FROM jobs
-          WHERE created_at <= :now
-            AND (status = 'PENDING' OR (status = 'RUNNING' AND lease_until <= :now))
+          WHERE created_at <= :now AND available_at <= :now
+            AND (status IN ('PENDING', 'QUEUED') OR (status = 'RUNNING' AND lease_until <= :now))
             AND attempts < 3
           ORDER BY created_at, id
           LIMIT 1 FOR UPDATE SKIP LOCKED
@@ -28,17 +28,63 @@ interface JobRepository extends JpaRepository<JobEntity, UUID> {
       nativeQuery = true)
   Optional<JobEntity> lockNext(@Param("now") Instant now);
 
+  @Query(
+      value =
+          """
+      SELECT * FROM jobs
+      WHERE id = :id AND updated_at <= :now AND available_at <= :now
+        AND (status IN ('PENDING', 'QUEUED') OR (status = 'RUNNING' AND lease_until <= :now))
+      FOR UPDATE SKIP LOCKED
+      """,
+      nativeQuery = true)
+  Optional<JobEntity> lockClaimable(@Param("id") UUID id, @Param("now") Instant now);
+
+  @Query(
+      value =
+          """
+      SELECT * FROM jobs
+      WHERE id = :id AND status = 'RUNNING' AND lease_token = :leaseToken
+        AND lease_until > :now AND updated_at <= :now
+      FOR UPDATE
+      """,
+      nativeQuery = true)
+  Optional<JobEntity> lockOwned(
+      @Param("id") UUID id, @Param("leaseToken") UUID leaseToken, @Param("now") Instant now);
+
+  @Query(
+      value =
+          """
+      SELECT * FROM jobs
+      WHERE status = 'RUNNING' AND lease_until <= :now
+      ORDER BY lease_until, id
+      LIMIT :limit FOR UPDATE SKIP LOCKED
+      """,
+      nativeQuery = true)
+  List<JobEntity> lockExpired(@Param("now") Instant now, @Param("limit") int limit);
+
+  @Query(
+      value =
+          """
+      SELECT * FROM jobs
+      WHERE id = :id AND status IN ('PENDING', 'QUEUED') AND attempts = :jobAttempt
+        AND updated_at <= :now
+      FOR UPDATE
+      """,
+      nativeQuery = true)
+  Optional<JobEntity> lockForPublicationFailure(
+      @Param("id") UUID id, @Param("jobAttempt") int jobAttempt, @Param("now") Instant now);
+
   @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(
       value =
           """
-          UPDATE jobs
-          SET status = 'FAILED', failure_code = 'MAX_ATTEMPTS_EXCEEDED',
-              lease_token = NULL, lease_until = NULL, updated_at = :now
-          WHERE status = 'RUNNING' AND lease_until <= :now AND attempts >= 3
-          """,
+      UPDATE jobs SET status = 'QUEUED', updated_at = :now
+      WHERE id = :id AND status = 'PENDING' AND attempts = :jobAttempt
+        AND available_at <= :now AND updated_at <= :now
+      """,
       nativeQuery = true)
-  int failExhausted(@Param("now") Instant now);
+  int markQueued(
+      @Param("id") UUID id, @Param("jobAttempt") int jobAttempt, @Param("now") Instant now);
 
   @Modifying(flushAutomatically = true, clearAutomatically = true)
   @Query(

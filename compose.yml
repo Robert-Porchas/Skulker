@@ -1,6 +1,22 @@
 name: skulker
 
 services:
+  rabbitmq:
+    image: rabbitmq:4.3.7-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: skulker
+      RABBITMQ_DEFAULT_PASS: ${SKULKER_RABBIT_PASSWORD:?Set SKULKER_RABBIT_PASSWORD in your shell or .env}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
   postgres:
     image: postgres:17.11-alpine
     environment:
@@ -19,4 +35,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  rabbitmq-data:
   postgres-data:

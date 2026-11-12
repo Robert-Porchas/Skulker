@@ -19,7 +19,10 @@ class JobStoreValidationTest {
   private static final String HASH = "a".repeat(64);
   private final DatasetRepository datasets = mock(DatasetRepository.class);
   private final JobRepository jobs = mock(JobRepository.class);
-  private final JobStore store = new JobStore(datasets, jobs);
+  private final OutboxRepository outbox = mock(OutboxRepository.class);
+  private final BatchRepository batches = mock(BatchRepository.class);
+  private final BatchJobRepository batchJobs = mock(BatchJobRepository.class);
+  private final JobStore store = new JobStore(datasets, jobs, outbox, batches, batchJobs);
 
   @ParameterizedTest
   @CsvSource({"0,0", "101,0", "1,-1", "-1,1"})

@@ -40,6 +40,9 @@ class JobEntity {
   @Column(name = "updated_at", nullable = false)
   Instant updatedAt;
 
+  @Column(name = "available_at", nullable = false)
+  Instant availableAt;
+
   @Column(name = "lease_token")
   UUID leaseToken;
 
@@ -58,6 +61,7 @@ class JobEntity {
     this.configurationJson = configurationJson;
     this.createdAt = now;
     this.updatedAt = now;
+    this.availableAt = now;
   }
 
   JobRecord snapshot() {

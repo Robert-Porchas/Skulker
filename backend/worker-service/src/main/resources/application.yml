@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: skulker-worker
+  datasource:
+    url: ${SKULKER_DATABASE_URL:jdbc:postgresql://localhost:5432/skulker}
+    username: ${SKULKER_DATABASE_USERNAME:skulker}
+    password: ${SKULKER_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${SKULKER_RABBIT_HOST:localhost}
+    port: ${SKULKER_RABBIT_PORT:5672}
+    username: ${SKULKER_RABBIT_USERNAME}
+    password: ${SKULKER_RABBIT_PASSWORD}
+    connection-timeout: 5s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 1
+        concurrency: 1
+        max-concurrency: 1
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8081}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+logging:
+  structured:
+    format:
+      console: ${LOG_FORMAT:ecs}
+skulker:
+  messaging:
+    enabled: ${SKULKER_MESSAGING_ENABLED:true}
+    scheduling-enabled: ${SKULKER_MESSAGING_SCHEDULING_ENABLED:true}
+    poll-delay: ${SKULKER_MESSAGING_POLL_DELAY:1000}
+  worker:
+    lease-duration: ${SKULKER_WORKER_LEASE_DURATION:PT5M}
+    retry-backoff: ${SKULKER_WORKER_RETRY_BACKOFF:PT1S}
+    concurrency: ${SKULKER_WORKER_CONCURRENCY:1}

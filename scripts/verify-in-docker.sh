@@ -25,10 +25,13 @@ if [[ "$container_state" != exited ]]; then
 fi
 check_status=$("$docker_command" inspect -f '{{.State.ExitCode}}' "$container_id" | tr -d '\r')
 mkdir -p "$reports_dir"
-if "$docker_command" cp "$container_id:/workspace/api-service/build/test-results" - |
-    tar -xf - -C "$reports_dir"; then
-  printf 'Integration test XML copied to %s\n' "$reports_dir/test-results"
-else
-  printf 'No API test reports were produced; inspect build output above.\n' >&2
-fi
+for module in api-service worker-service; do
+  mkdir -p "$reports_dir/$module"
+  if "$docker_command" cp "$container_id:/workspace/$module/build/test-results" - |
+      tar -xf - -C "$reports_dir/$module"; then
+    printf '%s test XML copied to %s\n' "$module" "$reports_dir/$module/test-results"
+  else
+    printf 'No %s test reports were produced; inspect build output above.\n' "$module" >&2
+  fi
+done
 exit "$check_status"

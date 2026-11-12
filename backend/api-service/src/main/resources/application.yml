@@ -11,6 +11,15 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  rabbitmq:
+    host: ${SKULKER_RABBIT_HOST:localhost}
+    port: ${SKULKER_RABBIT_PORT:5672}
+    username: ${SKULKER_RABBIT_USERNAME:skulker}
+    password: ${SKULKER_RABBIT_PASSWORD:}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
   servlet:
     multipart:
       max-file-size: 2MB
@@ -37,5 +46,9 @@ logging:
       console: ${LOG_FORMAT:ecs}
 skulker:
   jobs:
-    local-enabled: ${SKULKER_LOCAL_JOBS_ENABLED:true}
+    local-enabled: ${SKULKER_LOCAL_JOBS_ENABLED:false}
     poll-delay: ${SKULKER_JOB_POLL_DELAY:1000}
+  messaging:
+    enabled: ${SKULKER_MESSAGING_ENABLED:true}
+    scheduling-enabled: ${SKULKER_MESSAGING_SCHEDULING_ENABLED:true}
+    poll-delay: ${SKULKER_MESSAGING_POLL_DELAY:1000}

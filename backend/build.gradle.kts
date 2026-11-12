@@ -49,11 +49,25 @@ spotless {
 }
 
 tasks.named("check") {
-  dependsOn(":financial-engine:check", ":job-store:check", ":api-service:check")
+  dependsOn(
+    ":financial-engine:check",
+    ":job-store:check",
+    ":api-service:check",
+    ":shared-domain:check",
+    ":messaging:check",
+    ":worker-service:check",
+  )
 }
 
 tasks.named("assemble") {
-  dependsOn(":financial-engine:assemble", ":job-store:assemble", ":api-service:assemble")
+  dependsOn(
+    ":financial-engine:assemble",
+    ":job-store:assemble",
+    ":api-service:assemble",
+    ":shared-domain:assemble",
+    ":messaging:assemble",
+    ":worker-service:assemble",
+  )
 }
 
 tasks.wrapper {
