@@ -17,9 +17,11 @@ documentation. Milestone 1 provides:
 - Explicit unavailable values for warmup periods
 - Deterministic JUnit 5 tests using small in-memory fixtures
 - REST dataset registration, job submission/status, and stored result retrieval
-- PostgreSQL/Flyway persistence and a local asynchronous job runner with leased claims
+- PostgreSQL/Flyway persistence, transactional outbox publication, and fenced execution leases
+- RabbitMQ workers with confirmed publication, manual acknowledgments, bounded retries, and dead letters
+- Atomic parameter-sweep batches with independently executable dataset/window combinations
 
-RabbitMQ workers, deployment infrastructure, and a dashboard are planned.
+Deployment infrastructure, observability/benchmarks, optional AWS, and a dashboard are planned.
 Milestone check results, including pending integration gates, are recorded in the
 [verification record](docs/development/verification.md).
 
@@ -32,7 +34,10 @@ backend/
   gradlew / gradlew.bat        Pinned Gradle wrapper
   financial-engine/           Pure Java library and tests
   job-store/                  PostgreSQL entities, migrations, and transactional claims/results
-  api-service/                Spring Boot HTTP API and local scheduled execution
+  api-service/                HTTP dataset/job/batch API
+  shared-domain/              Framework-free versioned task references
+  messaging/                  Durable topology and confirmed outbox dispatcher
+  worker-service/             Manual-acknowledgment distributed execution
 docs/
   architecture/               Boundaries and calculation conventions
   adr/                        Accepted and proposed decisions
@@ -48,15 +53,15 @@ of Spring Boot, PostgreSQL, RabbitMQ, and deployment infrastructure. See the
 
 The current stack is Java 21, Gradle 9.6.1 with Kotlin DSL, JUnit 5.14.4 for the engine,
 Spring Boot 4.1.2, Boot-managed JUnit 6 service tests, PostgreSQL/Flyway, Docker Compose,
-and Spotless. Boot 3.5 ended OSS support; the [framework ADR](docs/adr/001-java-21-and-spring-boot.md)
-explains the supported-version deviation. RabbitMQ, kind/Helm/KEDA, optional Terraform/AWS,
+RabbitMQ 4.3.7, and Spotless. Boot 3.5 ended OSS support; the [framework ADR](docs/adr/001-java-21-and-spring-boot.md)
+explains the supported-version deviation. kind/Helm/KEDA, optional Terraform/AWS,
 Prometheus/Grafana, and Next.js/TypeScript come in later milestones.
 
 ## Local setup and checks
 
 Install a **Java 21 JDK** and set `JAVA_HOME` to it. No global Gradle installation or
 cloud credentials are required. The full build requires a running Docker engine for
-real PostgreSQL Testcontainers checks; standalone engine tests do not. Initial builds
+real PostgreSQL/RabbitMQ Testcontainers checks; standalone engine tests do not. Initial builds
 need network access for Gradle, dependencies, and container images. Tests use deterministic
 fixtures and never call market-data APIs.
 
@@ -74,6 +79,7 @@ On Windows use `gradlew.bat` in the same directory. Useful focused commands:
 ./gradlew :financial-engine:test
 ./gradlew :job-store:test :api-service:test
 ./gradlew :api-service:integrationTest
+./gradlew :worker-service:integrationTest
 ./gradlew spotlessCheck
 ./gradlew spotlessApply
 ```
@@ -82,7 +88,7 @@ On Windows use `gradlew.bat` in the same directory. Useful focused commands:
 JAR. Compilation uses `-Xlint:all -Werror`; no separate static analyzer is configured.
 Test reports are written to `backend/financial-engine/build/reports/tests/test/index.html`.
 See [local API setup and HTTP examples](docs/development/local-api.md) to start PostgreSQL
-and the API. The same guide covers containerized verification with Docker Desktop's
+and the API/worker. The same guide covers containerized verification with Docker Desktop's
 Windows CLI when a Linux Docker socket is unavailable.
 
 GitHub Actions runs the build for pull requests and pushes to `main` using Java 21,
@@ -123,7 +129,7 @@ not establish profitability.
 
 ## Development roadmap
 
-After API/database verification, introduce reliable distributed workers, local Kubernetes,
+After distributed-worker verification, introduce local Kubernetes,
 observability/benchmarks, optional AWS deployment, and dashboard in that order.
 See [milestones and acceptance criteria](docs/roadmap/milestones.md).
 

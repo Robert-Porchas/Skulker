@@ -1,16 +1,16 @@
 # ADR-004: RabbitMQ for future task transport
 
-Status: **Proposed** for Milestone 3; not implemented.
+Status: **Accepted** for Milestone 3; checked completion is recorded in the verification log.
 
 ## Context
 
 Independent symbol/strategy-parameter combinations should execute concurrently, with safe recovery after delivery duplication and worker failure.
 
-## Proposed decision
+## Decision
 
 Use RabbitMQ with durable queues, persistent task messages, explicit acknowledgments, bounded retries, and dead-letter handling. Keep PostgreSQL authoritative for task state and committed results. Use unique task identifiers and idempotent persistence rather than claiming exactly-once message delivery.
 
-Evaluate a transactional outbox for the failure window between creating database tasks and publishing messages. Define retry and lease/recovery semantics before implementation.
+Use a transactional outbox for the failure window between creating database tasks and publishing messages. See [publication and fencing](007-outbox-and-distributed-execution.md) for retry, lease, and recovery semantics.
 
 ## Consequences
 

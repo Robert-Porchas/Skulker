@@ -10,6 +10,10 @@ implementation starts with a pure Java 21 library, not a live-trading system.
   Do not expose JPA entities through HTTP. Preserve fencing tokens and atomic result/state commits.
 - `backend/api-service` owns HTTP validation, JSON adapters, and local scheduled execution.
   Keep public responses free of CSV contents, lease tokens, and internal failure details except explicit CSV downloads.
+- `shared-domain` owns framework-free task references. `messaging` owns topology and confirmed outbox dispatch.
+  `worker-service` owns manual acknowledgments and execution. Acknowledge only after durable completion/retry
+  or a verified active/terminal duplicate. Never acknowledge a merely not-yet-claimable pending task.
+  Preserve retry availability timestamps, attempt budgets, and current-owner fencing.
 - Work through authorized milestones sequentially. Record each acceptance gate in
   `docs/development/verification.md` before starting the next milestone.
   Add concrete modules as needed; do not create empty placeholder modules.
@@ -27,7 +31,7 @@ Install JDK 21 and run from `backend/` using the checked-in wrapper:
 `build` compiles production and test code with Java 21, runs engine JUnit 5 and service JUnit 6 tests, checks
 Spotless formatting, and treats all javac lint warnings as errors. No standalone
 static analyzer is configured. Test reports: `financial-engine/build/reports/tests/test/`.
-The full build requires Docker for real PostgreSQL Testcontainers tests; missing Docker must fail, not skip.
+The full build requires Docker for real PostgreSQL/RabbitMQ Testcontainers tests; missing Docker must fail, not skip.
 First builds require network access for dependencies/images. Tests never call market-data services.
 Focused unit checks: `./gradlew :financial-engine:test :job-store:test :api-service:test`.
 See `docs/development/local-api.md` for Docker Desktop verification and local API setup.

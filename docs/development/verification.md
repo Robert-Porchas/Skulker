@@ -47,3 +47,20 @@ Cloud provisioning remains separately authorized and must include cost and teard
 - Executable API packaging, compiler lint, and formatting passed. Source review found no blocking defects.
 - The verification container was removed automatically. Only local image/cache artifacts remain;
   no application data volume or cloud resources were created by the checks.
+
+## Milestone 3 — passed
+
+- Full `DOCKER_COMMAND=docker.exe bash scripts/verify-in-docker.sh` acceptance build passed on Java 21.
+- 296 tests passed: 217 engine, 32 store, 6 shared contracts, 14 worker unit, 3 JSON contract,
+  15 PostgreSQL API integration, and 9 PostgreSQL/RabbitMQ worker integration tests.
+  Zero failures, errors, or skipped tests.
+- Real-broker checks exercised confirmed persistent publication, duplicate delivery, publication
+  interruption before outbox commit, result commit before acknowledgment/redelivery, expired-owner
+  fencing, bounded processing retries/dead letters, malformed message routing, and unroutable retry.
+- An actual Spring Rabbit listener consumed a broker delivery and committed the expected result.
+- Parameter-batch creation, valid-combination generation, and atomic invalid-batch rejection passed.
+- Source review caught unclaimable pending-task acknowledgment and severe-loss precision cases;
+  fixes and regression coverage passed before acceptance. Durable timing policies remain separate
+  from clock-free financial computation.
+- Both executable applications, all library modules, compiler lint, formatting, and combined diff passed.
+  Only local test containers/images/cache were used; no pushes, merges, or cloud resources.
