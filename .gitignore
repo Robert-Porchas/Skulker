@@ -1,0 +1,46 @@
+# Build and local tooling
+**/.gradle/
+**/build/
+.tooling/
+.idea/
+.vscode/
+*.iml
+*.class
+**/node_modules/
+**/.next/
+**/*.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
+frontend/next-env.d.ts
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+
+# Future infrastructure state
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Keep datasets small and explicitly selected
+/datasets/*
+!/datasets/samples/
+/datasets/samples/*
+!/datasets/samples/README.md
+!/datasets/samples/*.csv

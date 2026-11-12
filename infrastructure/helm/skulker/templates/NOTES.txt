@@ -1,0 +1,25 @@
+Skulker local services are installed in namespace {{ .Release.Namespace }}.
+
+Create the external Secret {{ .Values.existingSecret }} before workloads start, with
+keys db-password, rabbit-password, and rabbit-uri. The RabbitMQ URI must reference
+{{ include "skulker.fullname" . }}-rabbitmq.{{ .Release.Namespace }}.svc.cluster.local:5672 and encode credentials and the default
+vhost (/%2f). This chart does not create or print secrets.
+
+Access the API through a local-only port forward:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "skulker.fullname" . }}-api 8080:8080 --address 127.0.0.1
+
+{{- if .Values.autoscaling.enabled }}
+KEDA must be installed separately before this chart. Workers scale from
+{{ .Values.autoscaling.minReplicas }} to {{ .Values.autoscaling.maxReplicas }} replicas
+using the skulker.backtests queue. Helm leaves the worker replica count to KEDA
+on both installation and upgrades; Kubernetes may start one worker briefly before
+KEDA applies the configured minimum. Check ScaledObject/{{ include "skulker.fullname" . }}-worker for scaler health.
+{{- else }}
+Worker autoscaling is disabled; {{ .Values.worker.replicas }} replicas are configured.
+{{- end }}
+
+PostgreSQL and RabbitMQ each run as one local instance with persistent storage.
+The API startup probe requires both dependencies to initialize and declare queues;
+later API readiness depends on PostgreSQL and liveness on JVM health only.
+PVCs are retained after helm uninstall. Do not rotate initialization passwords
+without updating credentials inside the existing database and broker volumes.

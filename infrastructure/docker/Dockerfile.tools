@@ -1,0 +1,19 @@
+FROM docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
+
+RUN apk add --no-cache bash ca-certificates curl openssl python3
+RUN curl -fsSL https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-linux-amd64 -o /usr/local/bin/kind \
+    && echo 'aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  /usr/local/bin/kind' | sha256sum -c - \
+    && chmod +x /usr/local/bin/kind
+RUN curl -fsSL https://dl.k8s.io/release/v1.36.6/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl \
+    && echo '29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634  /usr/local/bin/kubectl' | sha256sum -c - \
+    && chmod +x /usr/local/bin/kubectl
+RUN curl -fsSL https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz -o /tmp/helm.tar.gz \
+    && echo '0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b  /tmp/helm.tar.gz' | sha256sum -c - \
+    && tar -xzf /tmp/helm.tar.gz -C /tmp \
+    && mv /tmp/linux-amd64/helm /usr/local/bin/helm \
+    && rm -r /tmp/linux-amd64 /tmp/helm.tar.gz
+
+WORKDIR /workspace
+COPY . .
+ENV KUBECONFIG=/tmp/skulker.kubeconfig
+CMD ["sleep", "infinity"]

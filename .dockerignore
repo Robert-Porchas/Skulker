@@ -1,0 +1,17 @@
+# Runtime builds consume only the Gradle source tree.
+**
+!Dockerfile
+!.dockerignore
+!backend/
+!backend/**
+backend/**/build
+backend/**/.gradle
+backend/**/.git
+backend/**/.tooling
+backend/**/.aws
+backend/**/.env
+backend/**/.env.*
+backend/**/*.pem
+backend/**/*.key
+backend/**/*.tfstate
+backend/**/*.tfstate.*

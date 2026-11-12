@@ -1,0 +1,112 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# Create this Secret separately; the chart never renders credentials.
+# Required keys: db-password, rabbit-password, rabbit-uri.
+existingSecret: skulker-credentials
+
+api:
+  replicas: 1
+  image:
+    repository: skulker-api
+    tag: local
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+worker:
+  # Used only when autoscaling.enabled is false.
+  replicas: 1
+  image:
+    repository: skulker-worker
+    tag: local
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+postgres:
+  image:
+    repository: postgres
+    tag: 17.11-alpine
+    pullPolicy: IfNotPresent
+  persistence:
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+rabbitmq:
+  image:
+    repository: rabbitmq
+    tag: 4.3.7-management-alpine
+    digest: sha256:eb338b3fc8f5c251028c0022ac0de3fe1db2d599d1c6a08b45898f756f248881
+    pullPolicy: IfNotPresent
+  # Official Alpine image: rabbitmq UID 100, GID 101.
+  persistence:
+    size: 1Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 0
+  maxReplicas: 8
+  pollingInterval: 5
+  cooldownPeriod: 30
+  queueValue: 5
+
+terminationGracePeriodSeconds: 90
+
+# Optional, private, disposable monitoring for local development.
+monitoring:
+  enabled: false
+  prometheus:
+    image:
+      repository: prom/prometheus
+      tag: v3.16.0
+      digest: sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+      pullPolicy: IfNotPresent
+    retention: 6h
+    storageSize: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+  grafana:
+    existingSecret: skulker-grafana-credentials
+    image:
+      repository: grafana/grafana
+      tag: 13.3.1
+      digest: sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 384Mi

@@ -1,0 +1,118 @@
+{
+  "id": null,
+  "uid": "skulker-operations",
+  "title": "Skulker operations",
+  "tags": ["skulker", "local", "operations"],
+  "timezone": "utc",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "refresh": "5s",
+  "time": {"from": "now-30m", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Scraped worker targets",
+      "description": "Successful Prometheus worker scrapes; this is not a Kubernetes Ready-pod count.",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "decimals": 0}},
+      "targets": [{"refId": "A", "expr": "sum(up{application=\"skulker-worker\"})", "legendFormat": "scraped workers"}]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Active claimed attempts",
+      "description": "Attempts currently executing inside worker processes; excludes queued and unclaimed deliveries.",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "decimals": 0}},
+      "targets": [{"refId": "A", "expr": "sum(skulker_tasks_active{application=\"skulker-worker\"})", "legendFormat": "active attempts"}]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Successful task throughput",
+      "description": "Committed successful attempts per second, sampled over one minute. Not a benchmark result.",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops", "min": 0}},
+      "targets": [{"refId": "A", "expr": "sum(rate(skulker_tasks_succeeded_total{application=\"skulker-worker\"}[1m]))", "legendFormat": "successful tasks/s"}]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Mean successful attempt duration",
+      "description": "Worker claim-to-durable-completion timing. Excludes queue wait; use the benchmark for created-to-terminal latency.",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0}},
+      "targets": [{"refId": "A", "expr": "sum(rate(skulker_task_duration_seconds_sum{application=\"skulker-worker\",outcome=\"succeeded\"}[1m])) / sum(rate(skulker_task_duration_seconds_count{application=\"skulker-worker\",outcome=\"succeeded\"}[1m]))", "legendFormat": "mean attempt duration"}]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "RabbitMQ task queue depth",
+      "description": "Broker ready and unacknowledged messages for the durable task queue; excludes the dead-letter queue.",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "decimals": 0}},
+      "targets": [
+        {"refId": "A", "expr": "sum(rabbitmq_queue_messages_ready{queue=\"skulker.backtests\"})", "legendFormat": "ready"},
+        {"refId": "B", "expr": "sum(rabbitmq_queue_messages_unacked{queue=\"skulker.backtests\"})", "legendFormat": "unacknowledged"}
+      ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Mean worker process CPU usage",
+      "description": "Mean JVM-reported process CPU fraction among successfully scraped workers. Not node CPU or container CPU-core usage.",
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}},
+      "targets": [{"refId": "A", "expr": "avg(process_cpu_usage{application=\"skulker-worker\"} and on(namespace,pod) (up{application=\"skulker-worker\"} == 1))", "legendFormat": "mean process CPU"}]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Durable jobs by status",
+      "description": "All retained PostgreSQL jobs. API refreshes periodically; consult the refresh-availability panel before trusting cached counts.",
+      "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "decimals": 0}},
+      "targets": [{"refId": "A", "expr": "max by(status) (skulker_jobs{application=\"skulker-api\"})", "legendFormat": "{{status}}"}]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Retries, terminal failures and rejected deliveries",
+      "description": "Worker events per second. Infrastructure attempts that have not committed a result/retry are excluded from task-duration meters.",
+      "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops", "min": 0}},
+      "targets": [
+        {"refId": "A", "expr": "sum(rate(skulker_tasks_retried_total{application=\"skulker-worker\"}[1m]))", "legendFormat": "retried"},
+        {"refId": "B", "expr": "sum(rate(skulker_tasks_failed_total{application=\"skulker-worker\"}[1m]))", "legendFormat": "terminal failure"},
+        {"refId": "C", "expr": "sum(rate(skulker_tasks_rejected_total{application=\"skulker-worker\"}[1m]))", "legendFormat": "rejected delivery"}
+      ]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Outbox publication and retries",
+      "gridPos": {"x": 0, "y": 32, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "ops", "min": 0}},
+      "targets": [
+        {"refId": "A", "expr": "sum(rate(skulker_outbox_published_total[1m]))", "legendFormat": "published"},
+        {"refId": "B", "expr": "sum(rate(skulker_outbox_retried_total[1m]))", "legendFormat": "publication retries"}
+      ]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "JVM heap used by application",
+      "gridPos": {"x": 12, "y": 32, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}},
+      "targets": [{"refId": "A", "expr": "sum by(application) (jvm_memory_used_bytes{application=~\"skulker-api|skulker-worker\",area=\"heap\"})", "legendFormat": "{{application}} heap"}]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Store metrics refresh availability",
+      "description": "1 means the last PostgreSQL job-count refresh succeeded; 0 means counts may be stale or have never been loaded.",
+      "gridPos": {"x": 0, "y": 40, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"min": 0, "max": 1, "decimals": 0}},
+      "targets": [{"refId": "A", "expr": "max(skulker_store_metrics_up{application=\"skulker-api\"})", "legendFormat": "refresh succeeded"}]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Dead-letter queue depth",
+      "description": "Dead letters remain for inspection; the application does not automatically replay them.",
+      "gridPos": {"x": 12, "y": 40, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "skulker-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "decimals": 0}},
+      "targets": [{"refId": "A", "expr": "sum(rabbitmq_queue_messages_ready{queue=\"skulker.backtests.dead\"})", "legendFormat": "dead letters ready"}]
+    }
+  ]
+}
