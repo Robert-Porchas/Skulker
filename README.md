@@ -20,8 +20,9 @@ documentation. Milestone 1 provides:
 - PostgreSQL/Flyway persistence, transactional outbox publication, and fenced execution leases
 - RabbitMQ workers with confirmed publication, manual acknowledgments, bounded retries, and dead letters
 - Atomic parameter-sweep batches with independently executable dataset/window combinations
+- Nonroot application images, local kind/Helm deployment, and KEDA RabbitMQ scaling configuration
 
-Deployment infrastructure, observability/benchmarks, optional AWS, and a dashboard are planned.
+Observability/benchmarks, optional AWS, and a dashboard are planned.
 Milestone check results, including pending integration gates, are recorded in the
 [verification record](docs/development/verification.md).
 
@@ -44,6 +45,8 @@ docs/
   development/                Validation and contribution workflow
   roadmap/                    Milestones and acceptance criteria
 .github/                      Java CI and PR template
+infrastructure/               Local Helm chart, pinned kind configuration, deployment tools
+scripts/                      Image builds, guarded deployment, and smoke/scaling verification
 ```
 
 The engine depends only on the Java standard library at runtime. Future API and
@@ -54,8 +57,9 @@ of Spring Boot, PostgreSQL, RabbitMQ, and deployment infrastructure. See the
 The current stack is Java 21, Gradle 9.6.1 with Kotlin DSL, JUnit 5.14.4 for the engine,
 Spring Boot 4.1.2, Boot-managed JUnit 6 service tests, PostgreSQL/Flyway, Docker Compose,
 RabbitMQ 4.3.7, and Spotless. Boot 3.5 ended OSS support; the [framework ADR](docs/adr/001-java-21-and-spring-boot.md)
-explains the supported-version deviation. kind/Helm/KEDA, optional Terraform/AWS,
-Prometheus/Grafana, and Next.js/TypeScript come in later milestones.
+explains the supported-version deviation. Local deployment uses kind 0.33.0, Kubernetes 1.36.4,
+Helm 4.3.1, and KEDA 2.21.0. Terraform/AWS, Prometheus/Grafana, and Next.js/TypeScript
+come in later milestones.
 
 ## Local setup and checks
 
@@ -90,6 +94,7 @@ Test reports are written to `backend/financial-engine/build/reports/tests/test/i
 See [local API setup and HTTP examples](docs/development/local-api.md) to start PostgreSQL
 and the API/worker. The same guide covers containerized verification with Docker Desktop's
 Windows CLI when a Linux Docker socket is unavailable.
+For the local Kubernetes workflow, see [kind, Helm, and KEDA development](docs/development/kubernetes.md).
 
 GitHub Actions runs the build for pull requests and pushes to `main` using Java 21,
 SHA-pinned actions, Gradle caching, and read-only repository permissions.
@@ -129,8 +134,8 @@ not establish profitability.
 
 ## Development roadmap
 
-After distributed-worker verification, introduce local Kubernetes,
-observability/benchmarks, optional AWS deployment, and dashboard in that order.
+After local Kubernetes verification, introduce observability/benchmarks, optional AWS
+deployment, and the dashboard in that order.
 See [milestones and acceptance criteria](docs/roadmap/milestones.md).
 
 Use short-lived feature branches and small Conventional Commits. Commits, pushes,

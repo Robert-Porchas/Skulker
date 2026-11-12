@@ -64,3 +64,15 @@ Cloud provisioning remains separately authorized and must include cost and teard
   from clock-free financial computation.
 - Both executable applications, all library modules, compiler lint, formatting, and combined diff passed.
   Only local test containers/images/cache were used; no pushes, merges, or cloud resources.
+
+## Milestone 4 — passed
+
+- API/worker images built from SHA-pinned Java 21 images with UID/GID 10001; both application JARs packaged successfully.
+- Tool bootstrap, Helm lint, both scaling-mode renders, Bash syntax, ShellCheck, Python syntax, and infrastructure CI commands passed locally.
+- Three Kubernetes 1.36.4 kind nodes became Ready. KEDA 2.21.0 and the application Helm release deployed successfully.
+- `python3 scripts/kubernetes-smoke.py --autoscale --timeout-seconds 900` passed. The API-to-worker fixture returned final value 27 with the expected next-open trade.
+- Real queue load requested eight workers and observed five Ready workers. Two batches completed all 200 independent backtests; final ready/unacknowledged queue counts were both zero. Workers subsequently scaled back to zero.
+- Live workload probes, CPU/memory requests/limits, release ownership, and namespace were checked. Current API/database/broker pods are Ready with zero restarts.
+- Deployment checks identified and fixed BusyBox checksum-option portability, cross-namespace broker DNS, and initial database DNS/readiness retries. A wrapper execution disrupted by editing its live source was rerun unchanged and completed successfully before acceptance.
+- Evidence: ignored `.tooling/kubernetes-smoke.json`, collected 2026-11-12 02:05–02:07 UTC. This is an autoscaling acceptance check, not a 1/2/4/8 throughput comparison.
+- Native WSL Docker access was restored and verified during this milestone. All resources remain local; no registry pushes or cloud resources.

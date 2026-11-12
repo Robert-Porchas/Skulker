@@ -61,6 +61,11 @@ See `docs/development/local-api.md` for Docker Desktop verification and local AP
 Local development must not require AWS credentials. Cloud resources, deployments,
 and `terraform apply` require explicit approval plus a cost estimate and teardown plan.
 Do not add live trading, broker integration, or real-money execution.
+Local deployment commands are `scripts/bootstrap-deployment-tools.sh`, `scripts/build-images.sh`,
+and `scripts/local-cluster.sh create|deploy|status`. Keep kubeconfig/credentials in ignored tooling
+state or Kubernetes Secrets. Preserve the kind-skulker context and CA guards. Validate with
+`python3 scripts/kubernetes-smoke.py --autoscale`; do not claim scaling or throughput without evidence.
+Do not edit a script while its process is running.
 
 ## Definition of done
 
