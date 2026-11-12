@@ -1,6 +1,6 @@
 # ADR-001: Java 21 and the future service framework
 
-Status: **Accepted** for Java 21; **Proposed** for Spring Boot in Milestone 2.
+Status: **Accepted** for Java 21 and Spring Boot 4.1.2 services.
 
 ## Context
 
@@ -10,8 +10,15 @@ The engine needs immutable models, deterministic numerical code, and a reproduci
 
 Compile and test the engine with Java 21. Use Java records for appropriate immutable value models. No Spring dependencies are introduced in the initial milestone.
 
-Spring Boot 3.x is the requested service-framework target. Select a compatible, supported release and review its support status at Milestone 2; if the requested major is no longer suitable, document and review the deviation before adopting another major.
+The original service-framework target was Spring Boot 3.x. At Milestone 2, official release
+notes confirm [Spring Boot 3.5 ended OSS support](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/).
+Use Spring Boot 4.1.2, which [supports Java 21 and Gradle 9](https://docs.spring.io/spring-boot/system-requirements.html).
+This avoids requiring paid support for a new project and preserves the validated Gradle foundation.
+
+Keep the independent engine on JUnit 5. Service tests use Boot-managed JUnit 6 because
+[Spring Framework 7's testing extension requires it](https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/support-classes.html).
+Use Jackson 3's Boot-configured mapper for service JSON. These framework-driven deviations do not enter the engine.
 
 ## Consequences
 
-Contributors need a Java 21 JDK, and CI must exercise Java 21. Framework upgrades remain independent of financial calculations. This ADR does not assert support for a specific future Spring Boot release.
+Contributors need a Java 21 JDK, and CI exercises Java 21. Framework upgrades remain independent of financial calculations. Service dependencies follow the pinned Boot BOM; engine test dependencies remain separately pinned.

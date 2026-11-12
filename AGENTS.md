@@ -6,6 +6,10 @@ implementation starts with a pure Java 21 library, not a live-trading system.
 - `backend/financial-engine` owns immutable price models and deterministic calculations.
   Keep calculations free of Spring, persistence, messaging, I/O, network access, and system-clock dependencies.
   The CSV adapter accepts a caller-owned Reader; it does not open files or access storage itself.
+- `backend/job-store` owns PostgreSQL entities, Flyway migrations, and transactional state/lease/result writes.
+  Do not expose JPA entities through HTTP. Preserve fencing tokens and atomic result/state commits.
+- `backend/api-service` owns HTTP validation, JSON adapters, and local scheduled execution.
+  Keep public responses free of CSV contents, lease tokens, and internal failure details except explicit CSV downloads.
 - Work through authorized milestones sequentially. Record each acceptance gate in
   `docs/development/verification.md` before starting the next milestone.
   Add concrete modules as needed; do not create empty placeholder modules.
@@ -20,10 +24,13 @@ Install JDK 21 and run from `backend/` using the checked-in wrapper:
 ./gradlew clean build
 ```
 
-`build` compiles production and test code with Java 21, runs JUnit 5 tests, checks
+`build` compiles production and test code with Java 21, runs engine JUnit 5 and service JUnit 6 tests, checks
 Spotless formatting, and treats all javac lint warnings as errors. No standalone
 static analyzer is configured. Test reports: `financial-engine/build/reports/tests/test/`.
-First builds require network access for Gradle and Maven dependencies; tests use no network.
+The full build requires Docker for real PostgreSQL Testcontainers tests; missing Docker must fail, not skip.
+First builds require network access for dependencies/images. Tests never call market-data services.
+Focused unit checks: `./gradlew :financial-engine:test :job-store:test :api-service:test`.
+See `docs/development/local-api.md` for Docker Desktop verification and local API setup.
 
 ## Code and financial correctness
 

@@ -1,19 +1,26 @@
 # Skulker architecture
 
-Skulker is a historical financial research platform. The current implementation is a Java library; it has no live trading, service runtime, database, queue, cloud resources, or frontend.
+Skulker is a historical financial research platform. Its financial engine is a pure Java library;
+the API and PostgreSQL store add durable local job processing. There is no live trading, broker,
+cloud deployment, or frontend.
 
 ## Current boundary
 
 ```text
 backend/                       Gradle multi-project root
-└── financial-engine/          Pure Java 21 library and JUnit 5 tests
+├── financial-engine/          Pure Java 21 library and JUnit 5 tests
+├── job-store/                 PostgreSQL/Flyway persistence and leased job state
+└── api-service/               HTTP interface and local scheduled runner
 ```
 
 The engine owns validated historical prices and deterministic calculations. The calculation core accepts immutable in-memory data and returns values without network, filesystem, clock, or framework dependencies. A separate CSV adapter consumes a caller-owned Reader. This makes the same calculations usable from unit tests, a future API, and future distributed workers.
 
 `PriceBar` represents one symbol and trading date, with decimal OHLC prices, nonnegative integral volume, and optional adjusted close. `HistoricalPriceSeries` establishes a single-symbol, strictly chronological, immutable collection. `FinancialIndicators` calculates returns, moving averages, sample volatility, and drawdown. `MovingAverageBacktester` simulates a long-only crossover strategy with next-open execution, whole shares, exact decimal cash accounting, and immutable results. See [calculation conventions](calculations.md).
 
-There is only one implemented module. Shared build settings live in the Gradle root; convention plugins and shared-domain interfaces should be introduced only when multiple concrete consumers need them.
+There are three implemented modules. Shared build settings live in the Gradle root.
+The API depends on engine and store; the engine has no dependency back to services or storage.
+Transport contracts will enter a shared-domain module when RabbitMQ provides actual consumers.
+See [durable local execution](../adr/006-durable-api-job-store.md) for storage and lease decisions.
 
 ## Planned boundaries
 

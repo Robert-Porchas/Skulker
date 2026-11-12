@@ -19,11 +19,22 @@ For focused work:
 
 Formatting edits should be reviewed with the code changes. The first build needs access to the pinned Gradle distribution and dependency repositories; unit tests themselves use no network or external data.
 
-`build` runs compilation, JUnit tests, and Spotless checks. Java compilation enables `-Xlint:all -Werror`, so compiler warnings fail validation. There is no separate static-analysis tool in this initial slice. GitHub Actions runs the same build in the `Java CI` workflow, with the `Java 21 validation` job.
+`build` runs compilation, JUnit tests, real PostgreSQL Testcontainers checks, and Spotless checks.
+It requires Docker reachable by Java; missing Docker must fail integration validation.
+For unit-only work use `./gradlew :financial-engine:test :job-store:test :api-service:test`.
+Engine tests use JUnit 5; service tests use JUnit 6 as required by Spring Framework 7.
+Java compilation enables `-Xlint:all -Werror`, so compiler warnings fail validation.
+There is no separate static analyzer. GitHub Actions runs the same build in the `Java CI`
+workflow, with the `Java 21 validation` job. See [local API development](local-api.md).
 
 ## Git discipline
 
 Inspect the branch, working tree, and diff before editing. Preserve existing changes. Use short-lived feature branches from `main`, Conventional Commit messages, and pull requests. Commits require explicit authorization; pushes and merges require separate authorization. Never rewrite published history without agreement.
+
+When continuing sequential milestones while earlier local feature branches remain unmerged,
+start the next feature from the preceding verified commit and record that dependency.
+Keep `main` unchanged; do not merge merely to simplify the local branch graph.
+Review and merge dependent features in order once separately authorized.
 
 Suggested independently reviewable commit boundaries for this delivery:
 

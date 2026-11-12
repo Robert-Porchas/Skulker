@@ -34,3 +34,16 @@ check confirms Docker Desktop's Linux engine is running through the Windows CLI.
 Real PostgreSQL/RabbitMQ and local Kubernetes checks still require validated runtime access;
 containerized checks are an alternative if Linux integration remains unavailable.
 Cloud provisioning remains separately authorized and must include cost and teardown review.
+
+## Milestone 2 — passed
+
+- `DOCKER_COMMAND=docker.exe bash scripts/verify-in-docker.sh` completed `./gradlew --no-daemon clean build`
+  successfully on SHA-pinned Temurin 21.0.13 in local Docker Desktop.
+- 257 tests passed: 217 engine, 24 store validation, 3 JSON contract, and 13 real PostgreSQL integration tests.
+  Zero failures, errors, or skipped tests. Integration XML was copied to the ignored build directory.
+- Real PostgreSQL 17.11 exercised Flyway migrations, Hibernate schema validation, HTTP dataset/job/result
+  workflows, invalid uploads/requests, exact JSONB decimals, present/empty optional metrics,
+  concurrent claims, expired ownership fencing, bounded recovery, and atomic completion.
+- Executable API packaging, compiler lint, and formatting passed. Source review found no blocking defects.
+- The verification container was removed automatically. Only local image/cache artifacts remain;
+  no application data volume or cloud resources were created by the checks.
